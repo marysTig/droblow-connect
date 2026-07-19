@@ -16,8 +16,8 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold">Page not found</h2>
+        <h1 className="text-7xl font-bold text-foreground" dir="auto">404</h1>
+        <h2 className="mt-4 text-xl font-semibold" dir="auto">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           This page doesn't exist. Head back to the dashboard.
         </p>
@@ -37,7 +37,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Something went wrong</h1>
+        <h1 className="text-xl font-semibold" dir="auto">Something went wrong</h1>
         <p className="mt-2 text-sm text-muted-foreground">Please try again.</p>
         <div className="mt-6 flex gap-2 justify-center">
           <button onClick={() => { router.invalidate(); reset(); }} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">
@@ -63,7 +63,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
@@ -87,12 +87,24 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { AuthProvider } from "@/lib/auth";
+import { LanguageProvider } from "@/lib/i18n";
+import { CartProvider } from "@/lib/cart-context";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster />
+      <LanguageProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Outlet />
+            <CartDrawer />
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

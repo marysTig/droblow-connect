@@ -200,3 +200,143 @@
     font-weight: 600;
   }
 }
+
+/* Ecommerce Product Card Styles */
+.product-grid {
+  display: grid;
+  gap: 20px;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* Mobile: 2 columns */
+@media (max-width: 767px) {
+  .product-grid {
+    grid-template-columns: repeat(2, min-content);
+  }
+}
+
+/* Tablet: 3 columns */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .product-grid {
+    grid-template-columns: repeat(3, min-content);
+  }
+}
+
+/* Desktop: 6 columns */
+@media (min-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(6, min-content);
+  }
+}
+
+.product-card {
+  width: 230px;
+  height: 410px;
+  border-radius: var(--radius-2xl, 16px);
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.product-card-image-wrapper {
+  width: 230px;
+  height: 230px;
+  background-color: var(--muted);
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-left-radius: var(--radius-2xl, 16px);
+  border-top-right-radius: var(--radius-2xl, 16px);
+}
+
+.product-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-card-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.product-card-title {
+  height: 52px; /* max 2 lines */
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin: 0;
+  margin-bottom: auto;
+}
+
+.product-card-price-row {
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.product-card-price {
+  font-size: 22px;
+  font-weight: bold;
+  background-image: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.product-card-favorite {
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.product-card-favorite:hover {
+  color: var(--destructive);
+}
+
+.product-card-btn {
+  width: 100%;
+  height: 46px;
+  background-image: var(--gradient-brand);
+  color: var(--brand-foreground);
+  border-radius: var(--radius-md, 8px);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  font-size: 16px;
+  box-shadow: var(--shadow-brand);
+}
+
+.product-card-btn:hover {
+  opacity: 0.9;
+}

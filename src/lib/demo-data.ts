@@ -93,19 +93,23 @@ export const EARNINGS_CHART = [
   { month: "Jul", earnings: 128000, orders: 176 },
 ];
 
-export const TESTIMONIALS = [
-  { name: "Yacine M.", role: "Affiliate · Alger", text: "I earned 180,000 DZD last month working from my phone. Droblow ships fast and I focus on content.", avatar: "https://i.pravatar.cc/80?img=12" },
-  { name: "Amel K.", role: "Affiliate · Oran", text: "Zero stock, zero shipping headaches. I just create the order and get paid on delivery.", avatar: "https://i.pravatar.cc/80?img=32" },
-  { name: "Rafik B.", role: "Affiliate · Constantine", text: "Best affiliate platform in Algeria. Payouts are always on time.", avatar: "https://i.pravatar.cc/80?img=52" },
-];
 
-export const FAQS = [
-  { q: "How much does it cost to join?", a: "Joining Droblow Affiliate is 100% free. No subscription, no hidden fees." },
-  { q: "When do I get paid?", a: "Commissions are unlocked automatically once your customer receives the order. Withdrawals are processed within 48 hours." },
-  { q: "Do I need to buy stock?", a: "Never. Droblow owns and ships every product. You only promote and take orders." },
-  { q: "Do I need affiliate links?", a: "No. You collect customer info via DM, then create the order manually inside the platform." },
-  { q: "Which wilayas do you deliver to?", a: "All 58 Algerian wilayas via our partner shipping companies." },
-];
+export const FAQS = {
+  ar: [
+    { q: "كم تكلفة الانضمام؟", a: "الانضمام إلى Droblow Affiliate مجاني 100%. لا يوجد اشتراك ولا رسوم خفية." },
+    { q: "متى أحصل على أرباحي؟", a: "يتم فك قفل العمولات تلقائيًا بمجرد استلام العميل لطلبه. يتم معالجة السحوبات خلال 48 ساعة." },
+    { q: "هل أحتاج لشراء المخزون؟", a: "أبدًا. Droblow تمتلك وتشحن كل منتج. أنت تروج وتسجل الطلبات فقط." },
+    { q: "هل أحتاج لروابط إحالة؟", a: "لا. أنت تجمع معلومات العميل عبر الرسائل، ثم تنشئ الطلب يدويًا داخل المنصة." },
+    { q: "إلى أي ولايات يتم التوصيل؟", a: "إلى جميع ولايات الجزائر الـ 58 عبر شركات الشحن الشريكة." },
+  ],
+  fr: [
+    { q: "Combien coûte l'inscription ?", a: "Rejoindre Droblow Affiliate est 100% gratuit. Pas d'abonnement, pas de frais cachés." },
+    { q: "Quand suis-je payé ?", a: "Les commissions sont débloquées dès que votre client reçoit sa commande. Les retraits sont traités en 48 heures." },
+    { q: "Dois-je acheter du stock ?", a: "Jamais. Droblow possède et expédie chaque produit. Vous ne faites que promouvoir et prendre les commandes." },
+    { q: "Ai-je besoin de liens d'affiliation ?", a: "Non. Vous collectez les infos client par DM, puis vous créez la commande manuellement sur la plateforme." },
+    { q: "Dans quelles wilayas livrez-vous ?", a: "Dans les 58 wilayas d'Algérie via nos partenaires de livraison." },
+  ]
+};
 
 export const AFFILIATES = Array.from({ length: 12 }).map((_, i) => ({
   id: `AF-${1200 + i}`,

@@ -7,11 +7,11 @@ interface LogoProps {
   size?: number;
 }
 
-export function Logo({ className, showText = true, size = 36 }: LogoProps) {
+export function Logo({ className, showText = true, size = 40 }: LogoProps) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <div className={cn("flex items-center gap-3", className)}>
       <img
-        src={BRAND_LOGO}
+        src="/favicon.png"
         alt="Droblow"
         width={size}
         height={size}
@@ -20,10 +20,10 @@ export function Logo({ className, showText = true, size = 36 }: LogoProps) {
       />
       {showText && (
         <div className="flex flex-col leading-none">
-          <span className="text-[15px] font-bold tracking-tight text-primary">
+          <span className="text-[18px] font-extrabold tracking-tight text-primary">
             Droblow
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-success">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-success">
             Affiliate
           </span>
         </div>

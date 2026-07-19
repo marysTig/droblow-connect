@@ -1,21 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Check, ShoppingBag, Rocket, Wallet, TrendingUp, Package, Users, ShieldCheck, Sparkles, Facebook, Instagram, Star } from "lucide-react";
+import {
+  ArrowRight, Check, ShoppingBag, Rocket, Wallet, TrendingUp,
+  Package, Users, ShieldCheck, Sparkles, Facebook, Instagram, Star, Heart,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
-import { PRODUCTS, STATS, TESTIMONIALS, FAQS, formatDZD } from "@/lib/demo-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useProducts, useTestimonials, usePlatformStats, formatDZD, useCategories } from "@/lib/queries";
+import { FAQS } from "@/lib/demo-data";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 
-export const Route = createFileRoute("/")({
-  component: Landing,
-});
+import { PublicHeader } from "@/components/layout/PublicHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+
+export const Route = createFileRoute("/")({ component: Landing });
 
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <SiteHeader />
+      <PublicHeader />
       <Hero />
       <StatsBar />
       <HowItWorks />
+      <CategoriesCarousel />
       <ProductsPreview />
       <Testimonials />
       <FAQ />
@@ -25,100 +35,81 @@ function Landing() {
   );
 }
 
-function SiteHeader() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
-        <Link to="/"><Logo /></Link>
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#how" className="hover:text-foreground transition-colors">How it works</a>
-          <a href="#products" className="hover:text-foreground transition-colors">Products</a>
-          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm"><Link to="/login">Sign in</Link></Button>
-          <Button asChild size="sm" className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95">
-            <Link to="/register">Become an Affiliate <ArrowRight className="ml-1 h-4 w-4" /></Link>
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 function Hero() {
+  const { t } = useI18n();
+  const [, setVantaEffect] = useState<any>(null);
+  const myRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let effect: any;
+    const initVanta = async () => {
+      if (!effect && myRef.current) {
+        try {
+          const THREE = await import("three");
+          (window as any).THREE = THREE;
+          // @ts-ignore
+          const vantaModule = await import("vanta/dist/vanta.globe.min");
+          let GLOBE = vantaModule.default;
+          if (typeof GLOBE === "object" && GLOBE !== null && typeof GLOBE.default === "function") GLOBE = GLOBE.default;
+          if (typeof GLOBE !== "function") GLOBE = (window as any).VANTA?.GLOBE;
+          if (typeof GLOBE === "function") {
+            effect = GLOBE({
+              el: myRef.current, THREE, mouseControls: true, touchControls: true,
+              gyroControls: false, minHeight: 200, minWidth: 200, scale: 1, scaleMobile: 1,
+              color: 0xa855f7, color2: 0x10b981, backgroundColor: 0x020817,
+            });
+            setVantaEffect(effect);
+          }
+        } catch (e) { console.error("Vanta failed:", e); }
+      }
+    };
+    initVanta();
+    return () => { if (effect) effect.destroy(); };
+  }, []);
+
   return (
-    <section className="relative overflow-hidden gradient-hero">
-      <div className="absolute inset-0 -z-10 opacity-40">
+    <section className="relative overflow-hidden gradient-hero min-h-screen flex items-center justify-center">
+      <div className="absolute inset-0 -z-10 opacity-40 bg-background/20 pointer-events-none">
         <div className="absolute top-20 left-1/4 h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
         <div className="absolute top-40 right-1/4 h-96 w-96 rounded-full bg-success/20 blur-3xl" />
       </div>
-      <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success/5 px-3 py-1 text-xs font-medium text-success mb-6">
-            <Sparkles className="h-3.5 w-3.5" /> Now onboarding affiliates in all 58 wilayas
-          </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-primary">
-            Sell without stock. <br />
-            <span className="text-gradient-brand">Earn from every delivered order.</span>
+      <div ref={myRef} className="absolute inset-y-0 right-0 z-0 pointer-events-auto" style={{ left: '-300px', width: 'calc(100% + 300px)' }} />
+      <div className="mx-auto max-w-7xl px-6 py-16 md:py-24 relative z-10 w-full grid lg:grid-cols-2 gap-12 items-center -translate-y-[100px]">
+        <div className="max-w-2xl text-left">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1]" dir="auto">
+            {t("hero_title1")} <br />
+            <span className="text-gradient-brand">{t("hero_title2")}</span>
           </h1>
-          <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Join Droblow Affiliate and start selling physical products across Algeria. We handle inventory, shipping and delivery — you promote and earn.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg" className="gradient-brand text-brand-foreground shadow-brand h-12 px-7 text-base">
-              <Link to="/register">Become an Affiliate <ArrowRight className="ml-2 h-5 w-5" /></Link>
+          <p className="mt-8 text-xl md:text-2xl lg:text-[26px] leading-relaxed text-white max-w-2xl" dir="auto">{t("hero_desc")}</p>
+          <div className="mt-12 flex flex-col sm:flex-row gap-4">
+            <Button asChild size="lg" className="gradient-brand text-brand-foreground shadow-brand h-14 px-8 text-lg font-bold">
+              <Link to="/register">{t("hero_cta_primary")} <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 px-7 text-base border-2">
-              <a href="#products"><ShoppingBag className="mr-2 h-5 w-5" /> Browse Products</a>
+            <Button asChild size="lg" variant="outline" className="h-14 px-8 text-lg font-bold border-2">
+              <a href="#products"><ShoppingBag className="mr-2 h-5 w-5" />{t("hero_cta_secondary")}</a>
             </Button>
           </div>
-          <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Free forever</span>
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Payout in 48h</span>
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> No stock needed</span>
+          <div className="mt-12 flex flex-wrap items-center gap-7 text-base md:text-lg font-medium text-white">
+            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-success" /> {t("hero_feat1")}</span>
+            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-success" /> {t("hero_feat2")}</span>
+            <span className="inline-flex items-center gap-2"><Check className="h-5 w-5 text-success" /> {t("hero_feat3")}</span>
           </div>
         </div>
-
-        <HeroDashboardMock />
+        <div className="w-full" />
       </div>
     </section>
   );
 }
 
-function HeroDashboardMock() {
-  return (
-    <div className="mt-16 relative mx-auto max-w-5xl">
-      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-brand/40 via-success/30 to-brand/40 blur-2xl opacity-60" />
-      <div className="relative glass rounded-3xl border shadow-glow overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
-          {[
-            { label: "Available balance", value: "84,500 DZD", icon: Wallet, tint: "text-success" },
-            { label: "Delivered orders", value: "128", icon: Package, tint: "text-primary" },
-            { label: "This month earnings", value: "+18.4%", icon: TrendingUp, tint: "text-success" },
-          ].map((s) => (
-            <div key={s.label} className="p-6 flex items-center gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-accent">
-                <s.icon className={`h-6 w-6 ${s.tint}`} />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">{s.label}</div>
-                <div className="text-2xl font-bold text-primary">{s.value}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function StatsBar() {
+  const { t } = useI18n();
+  const { data: stats } = usePlatformStats();
   const items = [
-    { label: "Active Affiliates", value: STATS.activeAffiliates.toLocaleString() + "+" },
-    { label: "Products", value: STATS.products.toLocaleString() },
-    { label: "Orders Delivered", value: STATS.ordersDelivered.toLocaleString() },
-    { label: "Commissions Paid", value: formatDZD(STATS.commissionsPaid) },
+    { label: t("stats_affiliates"), value: stats ? stats.active_affiliates.toLocaleString() + "+" : "—" },
+    { label: t("stats_products"), value: stats ? stats.products_count.toLocaleString() : "—" },
+    { label: t("stats_delivered"), value: stats ? stats.orders_delivered.toLocaleString() : "—" },
+    { label: t("stats_commissions"), value: stats ? formatDZD(stats.commissions_paid) : "—" },
   ];
   return (
     <section className="border-y border-border bg-card">
@@ -135,29 +126,30 @@ function StatsBar() {
 }
 
 function HowItWorks() {
+  const { t } = useI18n();
   const steps = [
-    { icon: Users, title: "Create your account", desc: "Sign up free in less than 60 seconds." },
-    { icon: ShoppingBag, title: "Choose products", desc: "Browse the catalog and pick winning items." },
-    { icon: Rocket, title: "Publish on social media", desc: "Post on Facebook, TikTok, Instagram, WhatsApp." },
-    { icon: Package, title: "Receive customer orders", desc: "Collect the customer info via DM or comments." },
-    { icon: ShieldCheck, title: "Create the order in Droblow", desc: "Fill the simple order form. We confirm & ship." },
-    { icon: Wallet, title: "Earn your commission", desc: "Balance unlocks the second the order is delivered." },
+    { icon: Users, title: t("how_step1_title"), desc: t("how_step1_desc") },
+    { icon: ShoppingBag, title: t("how_step2_title"), desc: t("how_step2_desc") },
+    { icon: Rocket, title: t("how_step3_title"), desc: t("how_step3_desc") },
+    { icon: Package, title: t("how_step4_title"), desc: t("how_step4_desc") },
+    { icon: ShieldCheck, title: t("how_step5_title"), desc: t("how_step5_desc") },
+    { icon: Wallet, title: t("how_step6_title"), desc: t("how_step6_desc") },
   ];
   return (
     <section id="how" className="py-24">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="max-w-2xl">
-          <div className="text-sm font-semibold uppercase tracking-widest text-success">How it works</div>
-          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary">From your phone to your wallet in 6 steps</h2>
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="text-sm font-semibold uppercase tracking-widest text-success" dir="auto">{t("how_label")}</div>
+          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary" dir="auto">{t("how_title")}</h2>
         </div>
         <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {steps.map((s, i) => (
-            <div key={s.title} className="group relative rounded-2xl border bg-card p-7 hover:shadow-lg transition-all hover:-translate-y-1">
-              <div className="absolute top-5 right-5 text-5xl font-bold text-muted/60">0{i + 1}</div>
+            <div key={i} className="group relative rounded-2xl border bg-card p-7 hover:shadow-lg transition-all hover:-translate-y-1">
+              <div className="absolute top-5 right-5 text-5xl font-bold text-muted-foreground/40">0{i + 1}</div>
               <div className="grid h-12 w-12 place-items-center rounded-xl gradient-brand shadow-brand">
                 <s.icon className="h-6 w-6 text-brand-foreground" />
               </div>
-              <h3 className="mt-5 text-lg font-semibold">{s.title}</h3>
+              <h3 className="mt-5 text-lg font-semibold" dir="auto">{s.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
             </div>
           ))}
@@ -167,91 +159,187 @@ function HowItWorks() {
   );
 }
 
+function CategoriesCarousel() {
+  const { t } = useI18n();
+  const { data: dbCategories = [], isLoading } = useCategories();
+  
+  if (isLoading) return null;
+  
+  // Fallback items if db is completely empty
+  const fallbackCategories = [
+    { id: '1', name: 'Electronics', image: null },
+    { id: '2', name: 'Home', image: null },
+    { id: '3', name: 'Beauty', image: null },
+    { id: '4', name: 'Health', image: null },
+    { id: '5', name: 'Sports', image: null },
+    { id: '6', name: 'Toys', image: null },
+  ];
+  
+  const categories = dbCategories.length > 0 ? dbCategories : fallbackCategories;
+  
+  return (
+    <section className="py-16 md:py-24 overflow-hidden">
+      <div className="mx-auto max-w-[1500px] px-6 mb-12">
+         <div className="text-sm font-semibold uppercase tracking-widest text-success" dir="auto">{t("categories_label") || "Catégories"}</div>
+         <h2 className="mt-3 text-3xl md:text-4xl font-bold text-primary" dir="auto">{t("categories_title") || "Parcourir par catégorie"}</h2>
+      </div>
+      
+      <div className="mx-auto max-w-[1500px] px-6 lg:px-12">
+        <Carousel
+          opts={{
+            align: "start",
+            dragFree: true,
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-8 md:-ml-12 py-8">
+            {categories.map((cat, i) => (
+              <CarouselItem key={cat.id || i} className="pl-8 md:pl-12 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
+                <div className="flex flex-col items-center group cursor-pointer h-full">
+                  <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full bg-card border-none shadow-md hover:shadow-lg flex items-center justify-center transition-all duration-300 group-hover:-translate-y-2">
+                     <div className="absolute inset-0 rounded-full bg-success/20 group-hover:bg-success/30 transition-colors duration-300 z-0" />
+                     
+                     <img 
+                       src={cat.image || "/category-placeholder.png"} 
+                       alt={cat.name} 
+                       className="absolute z-10 w-[75%] h-[75%] object-contain rounded-full drop-shadow-xl transition-transform duration-300 group-hover:scale-110" 
+                     />
+                  </div>
+                  <h3 
+                    className="mt-6 text-center font-bold text-sm md:text-base max-w-[150px] leading-tight break-words" 
+                    dir="auto" 
+                    style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                  >
+                    {cat.name}
+                  </h3>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:flex -left-2 lg:-left-6 h-12 w-12 shadow-md border-border bg-card text-foreground" />
+          <CarouselNext className="hidden md:flex -right-2 lg:-right-6 h-12 w-12 shadow-md border-border bg-card text-foreground" />
+        </Carousel>
+      </div>
+    </section>
+  );
+}
+
 function ProductsPreview() {
+  const { t } = useI18n();
+  const { data: products = [], isLoading } = useProducts();
   return (
     <section id="products" className="py-24 bg-gradient-to-b from-background to-accent/40">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-12">
+      <div className="mx-auto max-w-[1500px] px-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-12 max-w-7xl mx-auto">
           <div>
-            <div className="text-sm font-semibold uppercase tracking-widest text-success">Catalog</div>
-            <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary">Winning products, ready to sell</h2>
+            <div className="text-sm font-semibold uppercase tracking-widest text-success">{t("products_label")}</div>
+            <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary" dir="auto">{t("products_title")}</h2>
           </div>
-          <Button asChild variant="outline"><Link to="/register">See all {PRODUCTS.length}+ products <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button asChild variant="outline">
+            <Link to="/register">{t("products_see_all")} {products.length}+ <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          </Button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {PRODUCTS.slice(0, 6).map((p) => (
-            <div key={p.id} className="group rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1">
-              <div className="aspect-[4/3] overflow-hidden bg-muted">
-                <img src={p.image} alt={p.name} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">{p.name}</h3>
-                  <span className="rounded-full bg-success/10 text-success px-2 py-0.5 text-[11px] font-semibold">In stock</span>
+        {isLoading ? (
+          <div className="product-grid">{[...Array(6)].map((_, i) => <div key={i} className="product-card animate-pulse" />)}</div>
+        ) : (
+          <div className="product-grid">
+            {products.slice(0, 6).map((p) => (
+              <Link
+                key={p.id}
+                to="/product/$productId"
+                params={{ productId: p.id }}
+                className="product-card"
+                style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+              >
+                <div className="product-card-image-wrapper">
+                  <img src={p.image} alt={p.name} loading="lazy" className="product-card-image" />
                 </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-muted/60 p-2">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Min</div>
-                    <div className="text-sm font-semibold">{formatDZD(p.minPrice)}</div>
+                <div className="product-card-content">
+                  <h3 className="product-card-title" dir="auto">{p.name}</h3>
+                  <div className="product-card-price-row">
+                    {p.is_active ? (
+                      <div className="product-card-price">{formatDZD(p.price)}</div>
+                    ) : (
+                      <div className="text-sm font-bold text-destructive">{t("product_card_out_of_stock")}</div>
+                    )}
+                    <button
+                      className="product-card-favorite"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <Heart className="h-6 w-6" />
+                    </button>
                   </div>
-                  <div className="rounded-lg bg-muted/60 p-2">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Sell</div>
-                    <div className="text-sm font-semibold">{formatDZD(p.suggestedPrice)}</div>
-                  </div>
-                  <div className="rounded-lg gradient-brand p-2 text-brand-foreground">
-                    <div className="text-[10px] uppercase tracking-wider opacity-80">Profit</div>
-                    <div className="text-sm font-bold">{formatDZD(p.commission)}</div>
-                  </div>
+                  {p.is_active ? (
+                    <span className="product-card-btn">{t("product_card_view")}</span>
+                  ) : (
+                    <span className="product-card-btn bg-destructive/10 text-destructive shadow-none" style={{ backgroundImage: 'none' }}>
+                      {t("product_card_unavailable")}
+                    </span>
+                  )}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
 function Testimonials() {
+  const { t } = useI18n();
+  const { data: testimonials = [], isLoading } = useTestimonials();
   return (
     <section className="py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-2xl mx-auto text-center mb-14">
-          <div className="text-sm font-semibold uppercase tracking-widest text-success">Testimonials</div>
-          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary">Loved by affiliates across Algeria</h2>
+          <div className="text-sm font-semibold uppercase tracking-widest text-success">{t("testimonials_label")}</div>
+          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary" dir="auto">{t("testimonials_title")}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="rounded-2xl border bg-card p-7 hover:shadow-lg transition-all">
-              <div className="flex gap-1 text-brand">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
-              </div>
-              <p className="mt-4 text-foreground leading-relaxed">"{t.text}"</p>
-              <div className="mt-6 flex items-center gap-3">
-                <img src={t.avatar} alt={t.name} className="h-10 w-10 rounded-full" />
-                <div>
-                  <div className="text-sm font-semibold">{t.name}</div>
-                  <div className="text-xs text-muted-foreground">{t.role}</div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => <div key={i} className="rounded-2xl border bg-card h-48 animate-pulse" />)}
+          </div>
+        ) : testimonials.length === 0 ? (
+          <p className="text-center text-muted-foreground">{t("testimonials_empty")}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t2) => (
+              <div key={t2.id} className="rounded-2xl border bg-card p-7 hover:shadow-lg transition-all">
+                <div className="flex gap-1 text-brand">
+                  {[...Array(t2.rating)].map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                </div>
+                <p className="mt-4 text-foreground leading-relaxed">"{t2.text}"</p>
+                <div className="mt-6 flex items-center gap-3">
+                  {t2.avatar && <img src={t2.avatar} alt={t2.name} className="h-10 w-10 rounded-full" />}
+                  <div>
+                    <div className="text-sm font-semibold">{t2.name}</div>
+                    <div className="text-xs text-muted-foreground">{t2.role}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
 function FAQ() {
+  const { t, lang } = useI18n();
+  const currentFaqs = FAQS[lang as keyof typeof FAQS] || FAQS.ar;
+
   return (
     <section id="faq" className="py-24 bg-accent/30">
       <div className="mx-auto max-w-3xl px-6">
         <div className="text-center mb-12">
-          <div className="text-sm font-semibold uppercase tracking-widest text-success">FAQ</div>
-          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary">Frequently asked questions</h2>
+          <div className="text-sm font-semibold uppercase tracking-widest text-success">{t("faq_label")}</div>
+          <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary" dir="auto">{t("faq_title")}</h2>
         </div>
         <Accordion type="single" collapsible className="space-y-3">
-          {FAQS.map((f, i) => (
+          {currentFaqs.map((f, i) => (
             <AccordionItem key={i} value={`item-${i}`} className="rounded-2xl border bg-card px-5 data-[state=open]:shadow-md">
               <AccordionTrigger className="text-left font-semibold hover:no-underline">{f.q}</AccordionTrigger>
               <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
@@ -264,6 +352,7 @@ function FAQ() {
 }
 
 function CTABand() {
+  const { t } = useI18n();
   return (
     <section className="py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -271,10 +360,10 @@ function CTABand() {
           <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-brand/30 blur-3xl" />
           <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-success/30 blur-3xl" />
           <div className="relative">
-            <h2 className="text-3xl md:text-5xl font-bold text-navy-foreground">Ready to start earning?</h2>
-            <p className="mt-4 text-lg text-navy-foreground/70 max-w-xl mx-auto">Create your free account and get access to the full catalog in under a minute.</p>
+            <h2 className="text-3xl md:text-5xl font-bold text-navy-foreground" dir="auto">{t("cta_title")}</h2>
+            <p className="mt-4 text-lg text-navy-foreground/70 max-w-xl mx-auto">{t("cta_desc")}</p>
             <Button asChild size="lg" className="mt-8 gradient-brand text-brand-foreground shadow-brand h-12 px-8 text-base">
-              <Link to="/register">Get started free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              <Link to="/register">{t("cta_button")} <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
           </div>
         </div>
@@ -283,38 +372,4 @@ function CTABand() {
   );
 }
 
-function SiteFooter() {
-  return (
-    <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
-        <div className="col-span-2">
-          <Logo />
-          <p className="mt-4 text-sm text-muted-foreground max-w-xs">The affiliate platform for physical products in Algeria. Sell without stock. Earn on every delivery.</p>
-          <div className="mt-4 flex gap-3">
-            <a href="#" className="grid h-9 w-9 place-items-center rounded-lg bg-muted hover:bg-accent transition-colors"><Facebook className="h-4 w-4" /></a>
-            <a href="#" className="grid h-9 w-9 place-items-center rounded-lg bg-muted hover:bg-accent transition-colors"><Instagram className="h-4 w-4" /></a>
-          </div>
-        </div>
-        <div>
-          <div className="text-sm font-semibold mb-3">Platform</div>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><a href="#how" className="hover:text-foreground">How it works</a></li>
-            <li><a href="#products" className="hover:text-foreground">Products</a></li>
-            <li><Link to="/register" className="hover:text-foreground">Sign up</Link></li>
-          </ul>
-        </div>
-        <div>
-          <div className="text-sm font-semibold mb-3">Company</div>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><a href="#" className="hover:text-foreground">About</a></li>
-            <li><a href="#" className="hover:text-foreground">Contact</a></li>
-            <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-border py-5 text-center text-xs text-muted-foreground">
-        © 2026 Droblow Affiliate. Made in Algeria.
-      </div>
-    </footer>
-  );
-}
+

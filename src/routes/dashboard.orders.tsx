@@ -1,31 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge } from "@/components/dashboard/shared";
-import { ORDERS, formatDZD, type OrderStatus } from "@/lib/demo-data";
+import { formatDZD, useOrders, useUpdateOrder, useDeleteOrder } from "@/lib/queries";
+import type { OrderStatus } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/dashboard/orders")({ component: OrdersPage });
 
 function OrdersPage() {
+  const { user } = useAuth();
+  const { data: orders = [], isLoading } = useOrders(user?.id);
+  const deleteOrder = useDeleteOrder();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const perPage = 8;
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
   const filtered = useMemo(() => {
-    return ORDERS.filter((o) => {
-      const matchesQ = !q || o.id.toLowerCase().includes(q.toLowerCase()) || o.customerName.toLowerCase().includes(q.toLowerCase()) || o.productName.toLowerCase().includes(q.toLowerCase());
+    return orders.filter((o) => {
+      const matchesQ = !q || o.id.toLowerCase().includes(q.toLowerCase()) || o.customer_name.toLowerCase().includes(q.toLowerCase()) || o.product_name.toLowerCase().includes(q.toLowerCase());
       const matchesS = status === "all" || o.status === status;
       return matchesQ && matchesS;
     });
-  }, [q, status]);
+  }, [q, status, orders]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paged = filtered.slice((page - 1) * perPage, page * perPage);
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this order?")) {
+      deleteOrder.mutate(id, {
+        onSuccess: () => toast.success("Order deleted"),
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -65,25 +82,40 @@ function OrdersPage() {
                 <TableHead>Commission</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">No orders match your filters.</TableCell></TableRow>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground animate-pulse">Loading orders...</TableCell></TableRow>
+              ) : paged.length === 0 ? (
+                <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No orders match your filters.</TableCell></TableRow>
               ) : paged.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-mono text-xs">{o.id}</TableCell>
-                  <TableCell className="font-medium">{o.productName}</TableCell>
+                  <TableCell className="font-medium">{o.product_name}</TableCell>
                   <TableCell>
-                    <div className="text-sm">{o.customerName}</div>
+                    <div className="text-sm">{o.customer_name}</div>
                     <div className="text-xs text-muted-foreground">{o.phone}</div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{o.wilaya}</TableCell>
                   <TableCell>{o.quantity}</TableCell>
-                  <TableCell className="font-semibold">{formatDZD(o.sellingPrice * o.quantity)}</TableCell>
-                  <TableCell className="font-semibold text-success">{formatDZD(o.commission)}</TableCell>
+                  <TableCell className="font-semibold">{formatDZD(o.selling_price * o.quantity)}</TableCell>
+                  <TableCell className="font-semibold text-success">{formatDZD(o.commission || 0)}</TableCell>
                   <TableCell><StatusBadge status={o.status} /></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    {o.status === "pending" && (
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => setEditingOrder(o)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(o.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -97,6 +129,78 @@ function OrdersPage() {
           </div>
         </div>
       </div>
+
+      {editingOrder && (
+        <EditOrderDialog 
+          order={editingOrder} 
+          open={!!editingOrder} 
+          onOpenChange={(open) => !open && setEditingOrder(null)} 
+        />
+      )}
     </div>
+  );
+}
+
+function EditOrderDialog({ order, open, onOpenChange }: { order: any; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const updateOrder = useUpdateOrder();
+  const [customerName, setCustomerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [wilaya, setWilaya] = useState("");
+  const [commune, setCommune] = useState("");
+
+  useEffect(() => {
+    if (order) {
+      setCustomerName(order.customer_name || "");
+      setPhone(order.phone || "");
+      setWilaya(order.wilaya || "");
+      setCommune(order.commune || "");
+    }
+  }, [order]);
+
+  const handleSave = () => {
+    updateOrder.mutate({
+      id: order.id,
+      customer_name: customerName,
+      phone,
+      wilaya,
+      commune
+    }, {
+      onSuccess: () => {
+        toast.success("Order updated successfully");
+        onOpenChange(false);
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit Order {order?.id}</DialogTitle></DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label>Customer Name</Label>
+            <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Phone</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Wilaya</Label>
+            <Input value={wilaya} onChange={(e) => setWilaya(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Commune</Label>
+            <Input value={commune} onChange={(e) => setCommune(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave} disabled={updateOrder.isPending} className="gradient-brand text-brand-foreground border-0 shadow-brand">
+            Save changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
