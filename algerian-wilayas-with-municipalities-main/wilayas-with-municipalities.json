@@ -8129,9 +8129,7 @@
     "wilayaCode": 65,
     "nameFr": "El Abiodh Sidi Cheikh",
     "nameAr": "الأبيض سيدي الشيخ",
-    "communes": [
-      { "nameFr": "El Abiodh Sidi Cheikh", "nameAr": "الأبيض سيدي الشيخ" }
-    ]
+    "communes": [{ "nameFr": "El Abiodh Sidi Cheikh", "nameAr": "الأبيض سيدي الشيخ" }]
   },
   {
     "wilayaCode": 66,

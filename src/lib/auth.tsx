@@ -25,7 +25,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       checkAdminStatus(session?.user?.id);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       checkAdminStatus(session?.user?.id);
@@ -40,18 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    
+
     // Check if the user is an admin in the affiliates table
     const { data, error } = await supabase
       .from("affiliates")
       .select("role")
       .eq("id", userId)
       .single();
-      
+
     if (error) {
       console.error("Error fetching user role:", error);
     }
-      
+
     setIsAdmin(data?.role === "admin");
     setIsLoading(false);
   };

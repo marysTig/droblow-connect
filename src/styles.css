@@ -60,10 +60,10 @@
   --radius: 0.875rem;
 
   /* Brand palette from logo */
-  --brand: oklch(0.78 0.22 145);              /* #5BEA52 bright green */
+  --brand: oklch(0.78 0.22 145); /* #5BEA52 bright green */
   --brand-foreground: oklch(0.18 0.08 260);
-  --brand-glow: oklch(0.72 0.19 155);         /* #27C86A emerald */
-  --navy: oklch(0.32 0.11 265);               /* #17366F navy */
+  --brand-glow: oklch(0.72 0.19 155); /* #27C86A emerald */
+  --navy: oklch(0.32 0.11 265); /* #17366F navy */
   --navy-foreground: oklch(0.99 0 0);
 
   --background: oklch(1 0 0);
@@ -73,7 +73,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.05 260);
 
-  --primary: oklch(0.32 0.11 265);            /* Navy as primary */
+  --primary: oklch(0.32 0.11 265); /* Navy as primary */
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.97 0.02 155);
   --secondary-foreground: oklch(0.32 0.11 265);
@@ -107,8 +107,9 @@
 
   /* Gradients & shadows */
   --gradient-brand: linear-gradient(135deg, oklch(0.78 0.22 145), oklch(0.72 0.19 155));
-  --gradient-hero: radial-gradient(ellipse at top, oklch(0.95 0.08 150 / 0.5), transparent 60%),
-                    linear-gradient(180deg, oklch(0.99 0.01 155), oklch(1 0 0));
+  --gradient-hero:
+    radial-gradient(ellipse at top, oklch(0.95 0.08 150 / 0.5), transparent 60%),
+    linear-gradient(180deg, oklch(0.99 0.01 155), oklch(1 0 0));
   --gradient-navy: linear-gradient(135deg, oklch(0.32 0.11 265), oklch(0.24 0.09 265));
   --gradient-soft: linear-gradient(180deg, oklch(0.98 0.02 150), oklch(1 0 0));
 
@@ -116,7 +117,8 @@
   --shadow-md: 0 4px 12px -2px oklch(0.32 0.11 265 / 0.08);
   --shadow-lg: 0 20px 40px -12px oklch(0.32 0.11 265 / 0.15);
   --shadow-brand: 0 20px 45px -12px oklch(0.72 0.19 155 / 0.4);
-  --shadow-glow: 0 0 0 1px oklch(0.72 0.19 155 / 0.1), 0 20px 45px -15px oklch(0.72 0.19 155 / 0.35);
+  --shadow-glow:
+    0 0 0 1px oklch(0.72 0.19 155 / 0.1), 0 20px 45px -15px oklch(0.72 0.19 155 / 0.35);
 }
 
 .dark {
@@ -147,8 +149,9 @@
   --sidebar-accent-foreground: oklch(0.98 0.005 150);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.72 0.19 155);
-  --gradient-hero: radial-gradient(ellipse at top, oklch(0.72 0.19 155 / 0.15), transparent 60%),
-                    linear-gradient(180deg, oklch(0.14 0.03 265), oklch(0.14 0.03 265));
+  --gradient-hero:
+    radial-gradient(ellipse at top, oklch(0.72 0.19 155 / 0.15), transparent 60%),
+    linear-gradient(180deg, oklch(0.14 0.03 265), oklch(0.14 0.03 265));
 }
 
 @utility glass {
@@ -195,7 +198,10 @@
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: -0.02em;
     font-weight: 600;
   }
@@ -238,7 +244,9 @@
   color: var(--card-foreground);
   border: 1px solid var(--border);
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
 }

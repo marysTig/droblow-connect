@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useAffiliateProfile } from "@/lib/queries";
@@ -63,7 +69,9 @@ function ProfileForm({ profile }: { profile: any }) {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold" dir="auto">{profile?.name || "No Name"}</h2>
+          <h2 className="text-xl font-semibold" dir="auto">
+            {profile?.name || "No Name"}
+          </h2>
           <p className="text-sm text-muted-foreground">
             Affiliate ID · {shortId} · Joined {joinedDate}
           </p>
@@ -118,7 +126,9 @@ function ProfileForm({ profile }: { profile: any }) {
                   disabled={!selectedWilaya}
                 >
                   <SelectTrigger className="mt-1.5 h-11 bg-background">
-                    <SelectValue placeholder={selectedWilaya ? "Select Commune" : "Select a Wilaya first"} />
+                    <SelectValue
+                      placeholder={selectedWilaya ? "Select Commune" : "Select a Wilaya first"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {communes.map((c) => (
@@ -198,7 +208,10 @@ function F({ label, ...rest }: { label: string } & React.InputHTMLAttributes<HTM
 function Save({ label = "Save changes" }: { label?: string }) {
   return (
     <div className="flex justify-end pt-2">
-      <Button className="gradient-brand text-brand-foreground shadow-brand" onClick={() => toast.success("Saved")}>
+      <Button
+        className="gradient-brand text-brand-foreground shadow-brand"
+        onClick={() => toast.success("Saved")}
+      >
         {label}
       </Button>
     </div>

@@ -29,7 +29,11 @@ export function useCategories() {
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (category: { name: string; image?: string | null }) => {
+    mutationFn: async (category: {
+      name: string;
+      image?: string | null;
+      subcategories?: string[] | null;
+    }) => {
       const { error } = await supabase.from("categories").insert(category);
       if (error) throw error;
     },
@@ -40,7 +44,15 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...fields }: { id: string; name?: string; image?: string | null }) => {
+    mutationFn: async ({
+      id,
+      ...fields
+    }: {
+      id: string;
+      name?: string;
+      image?: string | null;
+      subcategories?: string[] | null;
+    }) => {
       const { error } = await supabase.from("categories").update(fields).eq("id", id);
       if (error) throw error;
     },
@@ -64,12 +76,33 @@ export function useProducts() {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      let allProducts: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+
+        if (data) {
+          allProducts = [...allProducts, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allProducts;
     },
   });
 }
@@ -79,11 +112,7 @@ export function useProduct(id?: string) {
     queryKey: ["product", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
       if (error) throw error;
       return data;
     },
@@ -100,6 +129,7 @@ export function useCreateProduct() {
       image: string;
       price: number;
       category: string;
+      subcategory?: string | null;
       is_active: boolean;
     }) => {
       const { error } = await supabase.from("products").insert(product);
@@ -112,13 +142,17 @@ export function useCreateProduct() {
 export function useUpdateProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...fields }: {
+    mutationFn: async ({
+      id,
+      ...fields
+    }: {
       id: string;
       name?: string;
       description?: string;
       image?: string;
       price?: number;
       category?: string;
+      subcategory?: string | null;
       is_active?: boolean;
     }) => {
       const { error } = await supabase.from("products").update(fields).eq("id", id);
@@ -176,10 +210,7 @@ export function usePlatformStats() {
   return useQuery({
     queryKey: ["platform_stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("platform_stats")
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("platform_stats").select("*").single();
       if (error) throw error;
       return data;
     },
@@ -191,10 +222,7 @@ export function useOrders(affiliateId?: string) {
   return useQuery({
     queryKey: ["orders", affiliateId],
     queryFn: async () => {
-      let query = supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
       if (affiliateId) query = query.eq("affiliate_id", affiliateId);
       const { data, error } = await query;
       if (error) throw error;
@@ -242,7 +270,10 @@ export function useCreateOrder() {
 export function useUpdateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...fields }: {
+    mutationFn: async ({
+      id,
+      ...fields
+    }: {
       id: string;
       quantity?: number;
       selling_price?: number;
@@ -290,11 +321,7 @@ export function useAffiliateProfile(id?: string) {
     queryKey: ["affiliate", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("affiliates")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.from("affiliates").select("*").eq("id", id).single();
       if (error) throw error;
       return data;
     },
@@ -386,13 +413,19 @@ export function useShippingRates() {
 export function useUpdateShippingRate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ wilaya_id, ...fields }: {
+    mutationFn: async ({
+      wilaya_id,
+      ...fields
+    }: {
       wilaya_id: string;
       home_delivery?: number;
       desk_delivery?: number;
       is_available?: boolean;
     }) => {
-      const { error } = await supabase.from("shipping_rates").update(fields).eq("wilaya_id", wilaya_id);
+      const { error } = await supabase
+        .from("shipping_rates")
+        .update(fields)
+        .eq("wilaya_id", wilaya_id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shipping_rates"] }),

@@ -17,7 +17,7 @@ export interface CloudinaryUploadResult {
 export async function uploadToCloudinary(file: File): Promise<CloudinaryUploadResult> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error(
-      "Cloudinary env vars missing. Ensure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET are set in .env"
+      "Cloudinary env vars missing. Ensure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET are set in .env",
     );
   }
 
@@ -27,10 +27,10 @@ export async function uploadToCloudinary(file: File): Promise<CloudinaryUploadRe
   formData.append("file", file);
   formData.append("upload_preset", UPLOAD_PRESET);
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-    { method: "POST", body: formData }
-  );
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: formData,
+  });
 
   const json = await response.json();
 

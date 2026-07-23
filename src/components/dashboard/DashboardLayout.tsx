@@ -1,11 +1,34 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Package, PlusCircle, ShoppingBag, Wallet, ArrowDownToLine, UserRound, Search, Bell, Shield, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  Wallet,
+  ArrowDownToLine,
+  UserRound,
+  Search,
+  Bell,
+  Shield,
+  LogOut,
+  Truck,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart-context";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarFooter,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/brand/Logo";
 import { Input } from "@/components/ui/input";
@@ -14,7 +37,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function DashboardLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isActive = (u: string) => u === "/dashboard" ? pathname === u : pathname.startsWith(u);
+  const isActive = (u: string) => (u === "/dashboard" ? pathname === u : pathname.startsWith(u));
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -25,6 +48,7 @@ export function DashboardLayout() {
     { title: t("sidebar_orders"), url: "/dashboard/orders", icon: ShoppingBag },
     { title: t("sidebar_earnings"), url: "/dashboard/earnings", icon: Wallet },
     { title: t("sidebar_withdrawals"), url: "/dashboard/withdrawals", icon: ArrowDownToLine },
+    { title: t("sidebar_shipping"), url: "/dashboard/shipping", icon: Truck },
     { title: t("sidebar_profile"), url: "/dashboard/profile", icon: UserRound },
   ];
 
@@ -39,7 +63,11 @@ export function DashboardLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/40">
         <Sidebar collapsible="icon">
-          <SidebarHeader className="p-4"><Link to="/dashboard"><Logo /></Link></SidebarHeader>
+          <SidebarHeader className="p-4">
+            <Link to="/dashboard">
+              <Logo />
+            </Link>
+          </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>{t("sidebar_main")}</SidebarGroupLabel>
@@ -49,7 +77,8 @@ export function DashboardLayout() {
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
                         <Link to={item.url} className="flex items-center gap-2.5">
-                          <item.icon className="h-4 w-4" /><span>{item.title}</span>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -64,9 +93,14 @@ export function DashboardLayout() {
                   <SidebarMenu>
                     {adminNav.map((item) => (
                       <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.url)}
+                          tooltip={item.title}
+                        >
                           <Link to={item.url} className="flex items-center gap-2.5">
-                            <item.icon className="h-4 w-4" /><span>{item.title}</span>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -79,13 +113,25 @@ export function DashboardLayout() {
           <SidebarFooter className="p-3">
             <div className="flex items-center justify-between gap-3 rounded-xl bg-sidebar-accent/60 p-2.5">
               <div className="flex items-center gap-3">
-                <Avatar className="h-9 w-9"><AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
                 <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                  <div className="text-sm font-semibold truncate">{user?.user_metadata?.first_name || user?.email}</div>
-                  <div className="text-xs text-muted-foreground truncate">{isAdmin ? t("sidebar_admin") : "Affiliate"}</div>
+                  <div className="text-sm font-semibold truncate">
+                    {user?.user_metadata?.first_name || user?.email}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {isAdmin ? t("sidebar_admin") : "Affiliate"}
+                  </div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground" onClick={handleSignOut} title={t("sidebar_logout")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground"
+                onClick={handleSignOut}
+                title={t("sidebar_logout")}
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -97,18 +143,42 @@ export function DashboardLayout() {
             <SidebarTrigger />
             <div className="relative flex-1 max-w-md hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder={t("sidebar_search")} className="pl-9 h-10 bg-muted/50 border-transparent focus-visible:bg-background" />
+              <Input
+                placeholder={t("sidebar_search")}
+                className="pl-9 h-10 bg-muted/50 border-transparent focus-visible:bg-background"
+              />
             </div>
             <div className="flex-1 md:hidden" />
             <LanguageSwitcher />
+            {/* Cart icon – only on /dashboard/products */}
+            {pathname === "/dashboard/products" && <CartIconButton />}
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand" />
             </Button>
           </header>
-          <main className="flex-1 p-4 md:p-8"><Outlet /></main>
+          <main className="flex-1 p-4 md:p-8">
+            <Outlet />
+          </main>
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+function CartIconButton() {
+  const { totalItems, setIsDrawerOpen } = useCart();
+  return (
+    <button
+      onClick={() => setIsDrawerOpen(true)}
+      className="relative p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent"
+    >
+      <ShoppingBag className="h-5 w-5" />
+      {totalItems > 0 && (
+        <span className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-brand text-[9px] font-bold text-white flex items-center justify-center border-2 border-background">
+          {totalItems}
+        </span>
+      )}
+    </button>
   );
 }

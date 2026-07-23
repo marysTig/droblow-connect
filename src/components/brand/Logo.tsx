@@ -20,9 +20,7 @@ export function Logo({ className, showText = true, size = 40 }: LogoProps) {
       />
       {showText && (
         <div className="flex flex-col leading-none">
-          <span className="text-[18px] font-extrabold tracking-tight text-primary">
-            Droblow
-          </span>
+          <span className="text-[18px] font-extrabold tracking-tight text-primary">Droblow</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-success">
             Affiliate
           </span>

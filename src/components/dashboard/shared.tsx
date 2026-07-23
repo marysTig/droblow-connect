@@ -5,11 +5,21 @@ import { Badge } from "@/components/ui/badge";
 import type { LucideIcon } from "lucide-react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary" dir="auto">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-primary" dir="auto">
+          {title}
+        </h1>
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       {action}
@@ -17,8 +27,18 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   );
 }
 
-export function StatCard({ label, value, delta, icon: Icon, tone = "default" }: {
-  label: string; value: string; delta?: string; icon: LucideIcon; tone?: "default" | "brand" | "success" | "warning";
+export function StatCard({
+  label,
+  value,
+  delta,
+  icon: Icon,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  delta?: string;
+  icon: LucideIcon;
+  tone?: "default" | "brand" | "success" | "warning";
 }) {
   const tones: Record<string, string> = {
     default: "bg-muted text-primary",
@@ -39,8 +59,17 @@ export function StatCard({ label, value, delta, icon: Icon, tone = "default" }: 
         </div>
       </div>
       {delta && (
-        <div className={cn("mt-3 inline-flex items-center gap-1 text-xs font-medium", positive ? "text-success" : "text-destructive")}>
-          {positive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+        <div
+          className={cn(
+            "mt-3 inline-flex items-center gap-1 text-xs font-medium",
+            positive ? "text-success" : "text-destructive",
+          )}
+        >
+          {positive ? (
+            <TrendingUp className="h-3.5 w-3.5" />
+          ) : (
+            <TrendingDown className="h-3.5 w-3.5" />
+          )}
           {delta} <span className="text-muted-foreground font-normal">vs last month</span>
         </div>
       )}

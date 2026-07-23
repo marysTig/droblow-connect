@@ -22,7 +22,11 @@ export function PublicHeader() {
           <Link to="/" hash="how" className="hover:text-foreground transition-colors duration-150">
             {t("nav_how")}
           </Link>
-          <Link to="/" hash="products" className="hover:text-foreground transition-colors duration-150">
+          <Link
+            to="/"
+            hash="products"
+            className="hover:text-foreground transition-colors duration-150"
+          >
             {t("nav_products")}
           </Link>
           <Link to="/" hash="faq" className="hover:text-foreground transition-colors duration-150">
@@ -31,31 +35,47 @@ export function PublicHeader() {
         </nav>
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
-          
-          <button 
-            onClick={() => setIsDrawerOpen(true)}
-            className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ShoppingBag className="h-6 w-6" />
-            {totalItems > 0 && (
-              <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-brand text-[10px] font-bold text-white flex items-center justify-center border-2 border-background">
-                {totalItems}
-              </span>
-            )}
-          </button>
+
+          {!user && (
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ShoppingBag className="h-6 w-6" />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-brand text-[10px] font-bold text-white flex items-center justify-center border-2 border-background">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+          )}
 
           {user ? (
-            <Button asChild size="default" className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95 text-[15px] font-semibold px-5 hidden sm:flex">
+            <Button
+              asChild
+              size="default"
+              className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95 text-[15px] font-semibold px-5 hidden sm:flex"
+            >
               <Link to={isAdmin ? "/admin" : "/dashboard"}>
-                {isAdmin ? t("sidebar_admin_panel") : t("sidebar_dashboard")} <ArrowRight className="ml-1.5 h-4 w-4" />
+                {isAdmin ? t("sidebar_admin_panel") : t("sidebar_dashboard")}{" "}
+                <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
           ) : (
             <>
-              <Button asChild variant="ghost" size="default" className="text-[15px] font-semibold px-5 hidden sm:flex">
+              <Button
+                asChild
+                variant="ghost"
+                size="default"
+                className="text-[15px] font-semibold px-5 hidden sm:flex"
+              >
                 <Link to="/login">{t("nav_sign_in")}</Link>
               </Button>
-              <Button asChild size="default" className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95 text-[15px] font-semibold px-5 hidden sm:flex">
+              <Button
+                asChild
+                size="default"
+                className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95 text-[15px] font-semibold px-5 hidden sm:flex"
+              >
                 <Link to="/register">
                   {t("nav_become_affiliate")} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>

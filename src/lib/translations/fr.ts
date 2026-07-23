@@ -12,7 +12,8 @@ export const fr: Record<TranslationKey, string> = {
   hero_badge: "Vendre et gagner des commissions dans 69 wilayas",
   hero_title1: "Vendez sans stock.",
   hero_title2: "Gagnez sur chaque livraison.",
-  hero_desc: "Rejoignez Droblow Affiliate et commencez à vendre des produits physiques en Algérie. Nous gérons le stock, la livraison — vous promouvez et gagnez.",
+  hero_desc:
+    "Rejoignez Droblow Affiliate et commencez à vendre des produits physiques en Algérie. Nous gérons le stock, la livraison — vous promouvez et gagnez.",
   hero_cta_primary: "Devenir Affilié",
   hero_cta_secondary: "Voir les produits",
   hero_feat1: "Gratuit pour toujours",
@@ -41,6 +42,18 @@ export const fr: Record<TranslationKey, string> = {
   how_step6_title: "Gagnez votre commission",
   how_step6_desc: "Votre solde est crédité dès la livraison de la commande.",
 
+  // ── Onboarding ───────────────────────────────────────────────────
+  onboarding_step0_title: "1. S'inscrire",
+  onboarding_step0_desc: "Créez votre compte gratuitement pour commencer",
+  onboarding_step1_title: "2. Choisir",
+  onboarding_step1_desc: "Prenez beaucoup de produits dans le catalogue",
+  onboarding_step2_title: "3. Publier",
+  onboarding_step2_desc: "Publiez-les sur les réseaux sociaux",
+  onboarding_step3_title: "4. Vendre",
+  onboarding_step3_desc: "Amenez les informations des clients et saisissez vos commandes",
+  onboarding_step4_title: "5. Gagner",
+  onboarding_step4_desc: "Gagnez vos commissions une fois les commandes livrées",
+
   // ── Products ─────────────────────────────────────────────────────
   products_label: "Catalogue",
   products_title: "Produits gagnants, prêts à vendre",
@@ -66,7 +79,8 @@ export const fr: Record<TranslationKey, string> = {
   cta_button: "Commencer gratuitement",
 
   // ── Footer ───────────────────────────────────────────────────────
-  footer_desc: "La plateforme affiliée pour les produits physiques en Algérie. Vendez sans stock. Gagnez sur chaque livraison.",
+  footer_desc:
+    "La plateforme affiliée pour les produits physiques en Algérie. Vendez sans stock. Gagnez sur chaque livraison.",
   footer_platform: "Plateforme",
   footer_how: "Comment ça marche",
   footer_products: "Produits",
@@ -81,7 +95,8 @@ export const fr: Record<TranslationKey, string> = {
   auth_no_product: "Pas besoin de posséder un produit.",
   auth_no_stock: "Aucun stock.",
   auth_no_capital: "Aucun capital requis.",
-  auth_start_selling: "Commencez à vendre nos produits dès aujourd'hui. Publiez-les sur votre page Facebook, Marketplace, TikTok, Instagram ou toute autre plateforme.",
+  auth_start_selling:
+    "Commencez à vendre nos produits dès aujourd'hui. Publiez-les sur votre page Facebook, Marketplace, TikTok, Instagram ou toute autre plateforme.",
   auth_commission: "Chaque commande livrée vous rapporte une",
   auth_commission2: "commission",
   auth_earn_more: ". Plus vous vendez, plus vous gagnez.",
@@ -117,7 +132,8 @@ export const fr: Record<TranslationKey, string> = {
   register_submit: "Créer un compte",
   register_have_account: "Vous avez déjà un compte ?",
   register_sign_in: "Se connecter",
-  register_terms: "En continuant, vous acceptez nos Conditions et notre Politique de confidentialité.",
+  register_terms:
+    "En continuant, vous acceptez nos Conditions et notre Politique de confidentialité.",
 
   // ── Dashboard Sidebar ─────────────────────────────────────────────
   sidebar_main: "Principal",
@@ -130,6 +146,7 @@ export const fr: Record<TranslationKey, string> = {
   sidebar_profile: "Profil",
   sidebar_admin: "Administration",
   sidebar_admin_panel: "Panneau admin",
+  sidebar_shipping: "Tarifs Livraison",
   sidebar_search: "Rechercher commandes, produits…",
   sidebar_new_order_btn: "Nouvelle commande",
   sidebar_logout: "Se déconnecter",
@@ -337,4 +354,18 @@ export const fr: Record<TranslationKey, string> = {
   product_page_quality: "(Qualité vérifiée par Droblow)",
   product_page_selling_price: "Prix de vente",
   product_page_desc: "Description du produit",
+
+  // ── Shipping Rates Page (affiliate read-only) ─────────────────────
+  shipping_page_title: "Tarifs de livraison",
+  shipping_page_sub: "Consultez les frais de livraison par wilaya (lecture seule).",
+  shipping_page_info:
+    "Ces tarifs sont appliqués automatiquement lors de la création d'une commande. Vous ne pouvez pas les modifier.",
+  shipping_wilayas_count: "wilaya(s)",
+  shipping_col_wilaya: "Wilaya",
+  shipping_home: "À domicile",
+  shipping_desk: "Bureau / Relais",
+  shipping_col_available: "Disponible",
+  shipping_available: "Disponible",
+  shipping_unavailable: "Indisponible",
+  shipping_empty: "Aucun tarif disponible pour l'instant.",
 };

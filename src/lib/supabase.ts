@@ -21,6 +21,7 @@ export interface Category {
   id: string;
   name: string;
   image: string | null;
+  subcategories: string[] | null;
   created_at: string;
 }
 
@@ -32,6 +33,7 @@ export interface Product {
   images: string[] | null;
   price: number;
   category: string;
+  subcategory: string | null;
   is_active: boolean;
   created_at: string;
 }

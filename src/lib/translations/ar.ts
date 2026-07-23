@@ -10,7 +10,8 @@ export const ar = {
   hero_badge: "بيع واكسب عمولة في 69 ولاية",
   hero_title1: "بيع بدون مخزون.",
   hero_title2: "اكسب من كل طلب يُسلَّم.",
-  hero_desc: "سجّل الآن في Droblow Affiliate وابدأ تجارتك بدون رأس مال. نحن نوفر السلع ونتكفل بالتوصيل، لتتفرغ أنت للتسويق وتحقيق الأرباح.",
+  hero_desc:
+    "سجّل الآن في Droblow Affiliate وابدأ تجارتك بدون رأس مال. نحن نوفر السلع ونتكفل بالتوصيل، لتتفرغ أنت للتسويق وتحقيق الأرباح.",
   hero_cta_primary: "انضم كمسوّق",
   hero_cta_secondary: "تصفح المنتجات",
   hero_feat1: "مجاني للأبد",
@@ -38,6 +39,18 @@ export const ar = {
   how_step5_desc: "أكمل نموذج الطلب البسيط. نحن نؤكد ونشحن.",
   how_step6_title: "اكسب عمولتك",
   how_step6_desc: "يُفتح رصيدك فور تسليم الطلب.",
+
+  // ── Onboarding ───────────────────────────────────────────────────
+  onboarding_step0_title: "1. سجّل الآن",
+  onboarding_step0_desc: "أنشئ حسابك مجاناً للبدء",
+  onboarding_step1_title: "2. اختر",
+  onboarding_step1_desc: "خذ منتجات من الكتالوج",
+  onboarding_step2_title: "3. انشر",
+  onboarding_step2_desc: "انشرها على وسائل التواصل الاجتماعي",
+  onboarding_step3_title: "4. بيع",
+  onboarding_step3_desc: "أدخل معلومات عملائك وسجل طلباتك",
+  onboarding_step4_title: "5. اربح",
+  onboarding_step4_desc: "اربح عمولاتك بمجرد تسليم الطلبات",
 
   // ── Products ─────────────────────────────────────────────────────
   products_label: "الكتالوج",
@@ -79,7 +92,8 @@ export const ar = {
   auth_no_product: "لا حاجة لامتلاك منتج.",
   auth_no_stock: "لا مخزون.",
   auth_no_capital: "لا رأس مال مطلوب.",
-  auth_start_selling: "ابدأ بيع منتجاتنا اليوم. انشرها على صفحتك على فيسبوك، ماركت بلايس، تيك توك، إنستغرام، أو أي منصة.",
+  auth_start_selling:
+    "ابدأ بيع منتجاتنا اليوم. انشرها على صفحتك على فيسبوك، ماركت بلايس، تيك توك، إنستغرام، أو أي منصة.",
   auth_commission: "كل طلب يُسلَّم يمنحك",
   auth_commission2: "عمولة",
   auth_earn_more: ". كلما بعت أكثر، كلما كسبت أكثر.",
@@ -128,6 +142,7 @@ export const ar = {
   sidebar_profile: "الملف الشخصي",
   sidebar_admin: "الإدارة",
   sidebar_admin_panel: "لوحة الإدارة",
+  sidebar_shipping: "تعريفة التوصيل",
   sidebar_search: "بحث في الطلبات والمنتجات...",
   sidebar_new_order_btn: "طلب جديد",
   sidebar_logout: "تسجيل الخروج",
@@ -335,6 +350,19 @@ export const ar = {
   product_page_quality: "(الجودة مضمونة من Droblow)",
   product_page_selling_price: "سعر البيع",
   product_page_desc: "وصف المنتج",
+
+  // ── Shipping Rates Page (affiliate read-only) ─────────────────────
+  shipping_page_title: "تعريفة التوصيل",
+  shipping_page_sub: "اطلع على تكاليف التوصيل حسب الولاية (للعرض فقط).",
+  shipping_page_info: "تُطبّق هذه التعريفة تلقائياً عند إنشاء الطلب. لا يمكنك تعديلها.",
+  shipping_wilayas_count: "ولاية",
+  shipping_col_wilaya: "الولاية",
+  shipping_home: "توصيل للمنزل",
+  shipping_desk: "مكتب التوصيل",
+  shipping_col_available: "متوفر",
+  shipping_available: "متوفر",
+  shipping_unavailable: "غير متوفر",
+  shipping_empty: "لا توجد تعريفة بعد.",
 };
 
 export type TranslationKey = keyof typeof ar;

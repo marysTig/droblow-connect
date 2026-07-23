@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as ProductProductIdRouteImport } from './routes/product.$productId'
 import { Route as DashboardWithdrawalsRouteImport } from './routes/dashboard.withdrawals'
+import { Route as DashboardShippingRouteImport } from './routes/dashboard.shipping'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard.products'
 import { Route as DashboardOrdersRouteImport } from './routes/dashboard.orders'
@@ -63,6 +64,11 @@ const DashboardWithdrawalsRoute = DashboardWithdrawalsRouteImport.update({
   path: '/withdrawals',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardShippingRoute = DashboardShippingRouteImport.update({
+  id: '/shipping',
+  path: '/shipping',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
+    | '/dashboard/shipping'
     | '/dashboard/withdrawals'
     | '/product/$productId'
     | '/dashboard/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
+    | '/dashboard/shipping'
     | '/dashboard/withdrawals'
     | '/product/$productId'
     | '/dashboard'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
+    | '/dashboard/shipping'
     | '/dashboard/withdrawals'
     | '/product/$productId'
     | '/dashboard/'
@@ -248,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardWithdrawalsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/shipping': {
+      id: '/dashboard/shipping'
+      path: '/shipping'
+      fullPath: '/dashboard/shipping'
+      preLoaderRoute: typeof DashboardShippingRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/profile': {
       id: '/dashboard/profile'
       path: '/profile'
@@ -292,6 +311,7 @@ interface DashboardRouteChildren {
   DashboardOrdersRoute: typeof DashboardOrdersRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardShippingRoute: typeof DashboardShippingRoute
   DashboardWithdrawalsRoute: typeof DashboardWithdrawalsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
@@ -302,6 +322,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardOrdersRoute: DashboardOrdersRoute,
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardShippingRoute: DashboardShippingRoute,
   DashboardWithdrawalsRoute: DashboardWithdrawalsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }

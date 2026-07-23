@@ -5,11 +5,24 @@ import { useProduct, useProducts, useTestimonials, formatDZD } from "@/lib/queri
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
-  Download, ShoppingBag, CreditCard, ArrowLeft, ArrowRight,
-  ShieldCheck, Truck, Star, Package, Users, Zap, Check,
-  Heart, Share2, ChevronRight,
+  Download,
+  ShoppingBag,
+  CreditCard,
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  Truck,
+  Star,
+  Package,
+  Users,
+  Zap,
+  Check,
+  Heart,
+  Share2,
+  ChevronRight,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { useState } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
@@ -26,6 +39,7 @@ function ProductPage() {
   const { data: allProducts = [] } = useProducts();
   const { data: testimonials = [] } = useTestimonials();
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -99,7 +113,11 @@ function ProductPage() {
 
   const handleBuyNow = () => {
     addToCart(product);
-    navigate({ to: "/login" });
+    if (user) {
+      navigate({ to: "/dashboard/new-order", search: { productId: product.id } });
+    } else {
+      navigate({ to: "/login" });
+    }
   };
 
   const TRUST_BADGES = [
@@ -116,13 +134,19 @@ function ProductPage() {
       {/* ── Breadcrumb ── */}
       <div className="border-b border-border/50 bg-card/50">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">Accueil</Link>
+          <Link to="/" className="hover:text-foreground transition-colors">
+            Accueil
+          </Link>
           <ChevronRight className="h-3.5 w-3.5" />
-          <Link to="/" hash="products" className="hover:text-foreground transition-colors">Produits</Link>
+          <Link to="/" hash="products" className="hover:text-foreground transition-colors">
+            Produits
+          </Link>
           <ChevronRight className="h-3.5 w-3.5" />
           {product.category && (
             <>
-              <span className="hover:text-foreground transition-colors cursor-pointer">{product.category}</span>
+              <span className="hover:text-foreground transition-colors cursor-pointer">
+                {product.category}
+              </span>
               <ChevronRight className="h-3.5 w-3.5" />
             </>
           )}
@@ -131,7 +155,6 @@ function ProductPage() {
       </div>
 
       <main className="flex-1">
-
         {/* ══════════════════ HERO SECTION ══════════════════ */}
         <section className="py-12 md:py-20 bg-gradient-to-b from-accent/30 to-background">
           <div className="mx-auto max-w-7xl px-6">
@@ -139,16 +162,14 @@ function ProductPage() {
               {(() => {
                 const allImages = [product.image, ...(product.images || [])];
                 const activeImgUrl = allImages[activeImageIdx] || product.image;
-                
+
                 return (
                   <>
                     {/* Left – Product Image Gallery */}
                     <div className="flex flex-col gap-4 lg:sticky lg:top-24">
                       {/* Main image */}
                       <div className="relative rounded-3xl border border-border/60 bg-card overflow-hidden aspect-square shadow-xl group">
-                        {!imgLoaded && (
-                          <div className="absolute inset-0 bg-muted animate-pulse" />
-                        )}
+                        {!imgLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
                         <img
                           key={activeImgUrl}
                           src={activeImgUrl}
@@ -170,14 +191,21 @@ function ProductPage() {
                           {allImages.map((img, idx) => (
                             <button
                               key={idx}
-                              onClick={() => { setActiveImageIdx(idx); setImgLoaded(false); }}
+                              onClick={() => {
+                                setActiveImageIdx(idx);
+                                setImgLoaded(false);
+                              }}
                               className={`relative h-20 w-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                                activeImageIdx === idx 
-                                  ? "border-brand shadow-md scale-105" 
+                                activeImageIdx === idx
+                                  ? "border-brand shadow-md scale-105"
                                   : "border-transparent opacity-70 hover:opacity-100"
                               }`}
                             >
-                              <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+                              <img
+                                src={img}
+                                alt={`Thumbnail ${idx + 1}`}
+                                className="h-full w-full object-cover"
+                              />
                             </button>
                           ))}
                         </div>
@@ -194,23 +222,29 @@ function ProductPage() {
                             try {
                               const zip = new JSZip();
                               const folder = zip.folder(product.name.replace(/\s+/g, "_"));
-                              
+
                               for (let i = 0; i < allImages.length; i++) {
                                 const res = await fetch(allImages[i]);
                                 const blob = await res.blob();
-                                folder?.file(`${product.name.replace(/\s+/g, "_")}_${i + 1}.jpg`, blob);
+                                folder?.file(
+                                  `${product.name.replace(/\s+/g, "_")}_${i + 1}.jpg`,
+                                  blob,
+                                );
                               }
-                              
+
                               const content = await zip.generateAsync({ type: "blob" });
                               saveAs(content, `${product.name.replace(/\s+/g, "_")}_Photos.zip`);
-                              toast.success(`Dossier ZIP contenant ${allImages.length} image(s) téléchargé avec succès !`);
+                              toast.success(
+                                `Dossier ZIP contenant ${allImages.length} image(s) téléchargé avec succès !`,
+                              );
                             } catch (error) {
                               console.error(error);
                               toast.error("Erreur lors de la préparation du fichier ZIP");
                             }
                           }}
                         >
-                          <Download className="h-4 w-4" /> {t("product_page_download")} ({allImages.length})
+                          <Download className="h-4 w-4" /> {t("product_page_download")} (
+                          {allImages.length})
                         </Button>
                         <Button
                           variant="outline"
@@ -228,7 +262,10 @@ function ProductPage() {
               <div className="flex flex-col">
                 {/* Category + name */}
                 <div className="mb-6">
-                  <h1 className="text-3xl md:text-4xl xl:text-5xl font-bold leading-tight tracking-tight" dir="auto">
+                  <h1
+                    className="text-3xl md:text-4xl xl:text-5xl font-bold leading-tight tracking-tight"
+                    dir="auto"
+                  >
                     {product.name}
                   </h1>
                 </div>
@@ -245,7 +282,9 @@ function ProductPage() {
 
                 {/* Price */}
                 <div className="mb-8 p-5 rounded-2xl bg-card border border-border/60 shadow-sm">
-                  <div className="text-sm text-muted-foreground mb-1">{t("product_page_selling_price")}</div>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {t("product_page_selling_price")}
+                  </div>
                   <div className="text-4xl md:text-5xl font-bold text-gradient-brand">
                     {formatDZD(product.price)}
                   </div>
@@ -258,8 +297,12 @@ function ProductPage() {
                 {/* Description */}
                 <div className="mb-8 rounded-2xl bg-muted/50 p-6 border border-border/40">
                   <h3 className="font-semibold text-base mb-3">Description du produit</h3>
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed text-sm" dir="auto">
-                    {product.description || generateIntelligentDescription(product.name, product.category, product.price)}
+                  <p
+                    className="text-muted-foreground whitespace-pre-line leading-relaxed text-sm"
+                    dir="auto"
+                  >
+                    {product.description ||
+                      generateIntelligentDescription(product.name, product.category, product.price)}
                   </p>
                 </div>
 
@@ -291,7 +334,10 @@ function ProductPage() {
                 {/* Trust Badges */}
                 <div className="grid grid-cols-2 gap-3">
                   {TRUST_BADGES.map((b) => (
-                    <div key={b.label} className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-3">
+                    <div
+                      key={b.label}
+                      className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-3"
+                    >
                       <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
                         <b.icon className="h-4.5 w-4.5 text-brand" />
                       </div>
@@ -342,7 +388,7 @@ function ProductPage() {
           </div>
         </section>
 
-        {/* ══════════════════ AFFILIATE CTA BAND ══════════════════ */}
+        {/* ══════════════════ BOTTOM CTA BAND ══════════════════ */}
         <section className="py-20">
           <div className="mx-auto max-w-5xl px-6">
             <div className="relative overflow-hidden rounded-3xl gradient-navy p-10 md:p-16 text-center shadow-xl">
@@ -350,30 +396,31 @@ function ProductPage() {
               <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-success/30 blur-3xl pointer-events-none" />
               <div className="relative">
                 <div className="inline-flex items-center gap-2 rounded-full bg-brand/20 px-4 py-1.5 text-brand text-sm font-bold mb-5">
-                  <Zap className="h-4 w-4" /> Opportunity d'affiliation
+                  <Zap className="h-4 w-4" /> Produit disponible
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" dir="auto">
-                  Vendez ce produit & gagnez des commissions
+                  Commander ce produit
                 </h2>
                 <p className="text-white/70 text-base max-w-xl mx-auto mb-8">
-                  Rejoignez Droblow Affiliate, promouvez ce produit sur vos réseaux et gagnez une commission sur chaque livraison confirmée.
+                  Ajoutez ce produit à votre panier et finalisez votre commande en quelques clics.
+                  Paiement à la réception.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button asChild size="lg" className="gradient-brand text-brand-foreground shadow-brand h-13 px-8 text-base font-bold">
-                    <Link to="/register">
-                      Devenir affilié gratuitement <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="h-13 px-8 text-base font-bold border-white/30 text-white hover:bg-white/10">
-                    <Link to="/login">
-                      J'ai déjà un compte
-                    </Link>
+                  <Button
+                    size="lg"
+                    onClick={handleAddToCart}
+                    className="gradient-brand text-brand-foreground shadow-brand h-13 px-8 text-base font-bold"
+                  >
+                    <ShoppingBag className="mr-2 h-5 w-5" /> {t("products_add_cart")}
                   </Button>
                 </div>
                 <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-white/70">
-                  <span className="flex items-center gap-2"><Check className="h-4 w-4 text-brand" /> Inscription 100% gratuite</span>
-                  <span className="flex items-center gap-2"><Check className="h-4 w-4 text-brand" /> Aucun stock à acheter</span>
-                  <span className="flex items-center gap-2"><Check className="h-4 w-4 text-brand" /> Commissions versées rapidement</span>
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-brand" /> Livraison partout en Algérie
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-brand" /> Paiement à la livraison
+                  </span>
                 </div>
               </div>
             </div>
@@ -385,12 +432,19 @@ function ProductPage() {
           <section className="py-16 bg-accent/20 border-t border-border">
             <div className="mx-auto max-w-7xl px-6">
               <div className="text-center mb-10">
-                <div className="text-sm font-bold uppercase tracking-widest text-success mb-2">Avis clients</div>
-                <h2 className="text-3xl md:text-4xl font-bold text-primary">Ce que disent nos clients</h2>
+                <div className="text-sm font-bold uppercase tracking-widest text-success mb-2">
+                  Avis clients
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-primary">
+                  Ce que disent nos clients
+                </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {testimonials.slice(0, 3).map((t2: any) => (
-                  <div key={t2.id} className="rounded-2xl border bg-card p-7 hover:shadow-lg transition-all">
+                  <div
+                    key={t2.id}
+                    className="rounded-2xl border bg-card p-7 hover:shadow-lg transition-all"
+                  >
                     <div className="flex gap-1 text-warning mb-4">
                       {[...Array(t2.rating ?? 5)].map((_: any, i: number) => (
                         <Star key={i} className="h-4 w-4 fill-current" />
@@ -398,7 +452,13 @@ function ProductPage() {
                     </div>
                     <p className="text-foreground leading-relaxed text-sm">"{t2.text}"</p>
                     <div className="mt-5 flex items-center gap-3">
-                      {t2.avatar && <img src={t2.avatar} alt={t2.name} className="h-9 w-9 rounded-full object-cover" />}
+                      {t2.avatar && (
+                        <img
+                          src={t2.avatar}
+                          alt={t2.name}
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                      )}
                       <div>
                         <div className="text-sm font-semibold">{t2.name}</div>
                         {t2.role && <div className="text-xs text-muted-foreground">{t2.role}</div>}
@@ -417,7 +477,9 @@ function ProductPage() {
             <div className="mx-auto max-w-7xl px-6">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <div className="text-sm font-bold uppercase tracking-widest text-success mb-1">À découvrir</div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-success mb-1">
+                    À découvrir
+                  </div>
                   <h2 className="text-2xl md:text-3xl font-bold">Produits similaires</h2>
                 </div>
                 <Button asChild variant="outline" className="hidden sm:flex gap-2">
@@ -443,9 +505,13 @@ function ProductPage() {
                       />
                     </div>
                     <div className="p-4 flex flex-col gap-2 flex-1">
-                      <h3 className="font-semibold text-sm leading-tight line-clamp-2" dir="auto">{p.name}</h3>
+                      <h3 className="font-semibold text-sm leading-tight line-clamp-2" dir="auto">
+                        {p.name}
+                      </h3>
                       <div className="mt-auto">
-                        <div className="text-base font-bold text-gradient-brand">{formatDZD(p.price)}</div>
+                        <div className="text-base font-bold text-gradient-brand">
+                          {formatDZD(p.price)}
+                        </div>
                         <span className="mt-2 inline-flex items-center text-xs text-brand font-semibold gap-1">
                           Voir le produit <ArrowRight className="h-3 w-3" />
                         </span>
