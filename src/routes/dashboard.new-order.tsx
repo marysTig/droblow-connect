@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/shared";
-import { useProducts, useCreateOrder, formatDZD, useShippingRates } from "@/lib/queries";
+import { useProducts, useCreateOrder, formatDZD, getProductImage, useShippingRates } from "@/lib/queries";
 import { useI18n } from "@/lib/i18n";
 import { WILAYAS, WILAYA_OPTIONS } from "@/lib/constants";
 import wilayasData from "../../wilayas-with-municipalities.json";
@@ -157,6 +157,8 @@ function NewOrderPage() {
         delivery_type: deliveryType,
         delivery_price: deliveryPrice,
         affiliate_id: user?.id,
+        affiliate_name: user ? `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() || null : null,
+        status: "pending",
       },
       {
         onSuccess: () => {
@@ -420,7 +422,13 @@ function NewOrderPage() {
         <aside>
           <div className="rounded-2xl border bg-card p-5 sticky top-24">
             <div className="flex items-center gap-3 pb-4 border-b">
-              <img src={product.image} alt="" className="h-14 w-14 rounded-xl object-cover" />
+              {getProductImage(product) ? (
+                <img src={getProductImage(product)!} alt="" className="h-14 w-14 rounded-xl object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="font-semibold truncate">{product.name}</div>
                 <div className="text-xs text-muted-foreground">Qty: {qty}</div>

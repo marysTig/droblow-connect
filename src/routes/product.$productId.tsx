@@ -24,7 +24,7 @@ import {
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -44,6 +44,17 @@ function ProductPage() {
   const { t } = useI18n();
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [mainImgError, setMainImgError] = useState(false);
+
+  // Initialize the main image index to the first valid (non-empty) image when product loads
+  useEffect(() => {
+    if (!product) return;
+    const allImgs = [product.image, ...(product.images || [])].filter(Boolean);
+    // allImgs[0] is already the first valid image; index stays 0 — but reset on product change
+    setActiveImageIdx(0);
+    setImgLoaded(false);
+    setMainImgError(false);
+  }, [product?.id]);
 
   // Products in same category (excluding current)
   const related = allProducts
@@ -160,8 +171,12 @@ function ProductPage() {
           <div className="mx-auto max-w-7xl px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
               {(() => {
-                const allImages = [product.image, ...(product.images || [])];
-                const activeImgUrl = allImages[activeImageIdx] || product.image;
+                // Build full image list, filtering out empty/falsy values
+                const allImages = [product.image, ...(product.images || [])].filter(Boolean) as string[];
+
+                // Find the first valid image starting from activeImageIdx,
+                // skipping any that have already errored (mainImgError advances the index).
+                const activeImgUrl = allImages[activeImageIdx] ?? null;
 
                 return (
                   <>
@@ -170,13 +185,32 @@ function ProductPage() {
                       {/* Main image */}
                       <div className="relative rounded-3xl border border-border/60 bg-card overflow-hidden aspect-square shadow-xl group">
                         {!imgLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
-                        <img
-                          key={activeImgUrl}
-                          src={activeImgUrl}
-                          alt={product.name}
-                          onLoad={() => setImgLoaded(true)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                        />
+                        {activeImgUrl ? (
+                          <img
+                            key={activeImgUrl}
+                            src={activeImgUrl}
+                            alt={product.name}
+                            onLoad={() => {
+                              setImgLoaded(true);
+                              setMainImgError(false);
+                            }}
+                            onError={() => {
+                              // Current image failed — try the next one in the list
+                              if (activeImageIdx < allImages.length - 1) {
+                                setActiveImageIdx((prev) => prev + 1);
+                                setImgLoaded(false);
+                                setMainImgError(false);
+                              } else {
+                                setMainImgError(true);
+                              }
+                            }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground/40">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </div>
+                        )}
                         {/* Category badge */}
                         {product.category && (
                           <span className="absolute top-4 left-4 rounded-full bg-background/90 backdrop-blur-sm px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand border border-brand/20">
@@ -309,21 +343,30 @@ function ProductPage() {
                 {/* CTA Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   {product.is_active ? (
-                    <>
+                    !user ? (
                       <Button
-                        variant="outline"
-                        className="h-14 text-base font-bold border-2 gap-2"
-                        onClick={handleAddToCart}
+                        asChild
+                        className="col-span-full h-14 text-base font-bold bg-muted text-muted-foreground hover:bg-muted hover:text-muted-foreground shadow-none border border-border"
                       >
-                        <ShoppingBag className="h-5 w-5" /> Ajouter au panier
+                        <Link to="/login">{t("nav_sign_in")}</Link>
                       </Button>
-                      <Button
-                        className="h-14 text-base font-bold gradient-brand text-brand-foreground shadow-brand gap-2"
-                        onClick={handleBuyNow}
-                      >
-                        <CreditCard className="h-5 w-5" /> Acheter maintenant
-                      </Button>
-                    </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="h-14 text-base font-bold border-2 gap-2"
+                          onClick={handleAddToCart}
+                        >
+                          <ShoppingBag className="h-5 w-5" /> Ajouter au panier
+                        </Button>
+                        <Button
+                          className="h-14 text-base font-bold gradient-brand text-brand-foreground shadow-brand gap-2"
+                          onClick={handleBuyNow}
+                        >
+                          <CreditCard className="h-5 w-5" /> Acheter maintenant
+                        </Button>
+                      </>
+                    )
                   ) : (
                     <div className="col-span-full h-14 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center font-bold text-lg border border-destructive/20">
                       Rupture de stock
@@ -406,13 +449,23 @@ function ProductPage() {
                   Paiement à la réception.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button
-                    size="lg"
-                    onClick={handleAddToCart}
-                    className="gradient-brand text-brand-foreground shadow-brand h-13 px-8 text-base font-bold"
-                  >
-                    <ShoppingBag className="mr-2 h-5 w-5" /> {t("products_add_cart")}
-                  </Button>
+                  {!user ? (
+                    <Button
+                      asChild
+                      size="lg"
+                      className="bg-white/10 text-white hover:bg-white/20 h-13 px-8 text-base font-bold"
+                    >
+                      <Link to="/login">{t("nav_sign_in")}</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={handleAddToCart}
+                      className="gradient-brand text-brand-foreground shadow-brand h-13 px-8 text-base font-bold"
+                    >
+                      <ShoppingBag className="mr-2 h-5 w-5" /> {t("products_add_cart")}
+                    </Button>
+                  )}
                 </div>
                 <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-white/70">
                   <span className="flex items-center gap-2">

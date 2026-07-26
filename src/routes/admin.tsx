@@ -52,6 +52,22 @@ import {
   Wand2,
   MapPin,
   Clock,
+  LayoutDashboard,
+  ChevronRight,
+  Bell,
+  Settings,
+  TrendingUp,
+  Activity,
+  Truck,
+  BarChart2,
+  Menu,
+  Home,
+  LifeBuoy,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  SendHorizontal,
 } from "lucide-react";
 import {
   Select,
@@ -71,21 +87,26 @@ import {
   useWithdrawals,
   useEarningsChart,
   useUpdateOrderStatus,
+  useUpdateOrder,
+  useDeleteOrder,
   useUpdateWithdrawalStatus,
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
   formatDZD,
+  getProductImage,
   useCategories,
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
   useShippingRates,
   useUpdateShippingRate,
+  useSupportTickets,
+  useUpdateTicketStatus,
 } from "@/lib/queries";
 import { WILAYAS } from "@/lib/constants";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import type { Product, OrderStatus, Category } from "@/lib/supabase";
+import type { Product, OrderStatus, Category, SupportTicket, TicketStatus } from "@/lib/supabase";
 import { useState, useRef } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
 
@@ -740,7 +761,7 @@ function CategoriesTab() {
 
                   {/* Subcategories list */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {(cat.subcategories || []).map((sub, idx) => (
+                    {(cat.subcategories || []).map((sub: string, idx: number) => (
                       <Badge
                         key={idx}
                         variant="secondary"
@@ -751,7 +772,7 @@ function CategoriesTab() {
                           type="button"
                           className="ml-1 hover:text-destructive rounded-full p-0.5 transition-colors"
                           onClick={() => {
-                            const newSubs = (cat.subcategories || []).filter((s) => s !== sub);
+                            const newSubs = (cat.subcategories || []).filter((s: string) => s !== sub);
                             updateCategory.mutate({ id: cat.id, subcategories: newSubs });
                           }}
                         >
@@ -815,7 +836,32 @@ function CategoriesTab() {
   );
 }
 
-// ─── Admin Panel ─────────────────────────────────────────────────────────────
+
+// ─── Admin Panel (cPanel Style) ──────────────────────────────────────────────
+
+type AdminSection =
+  | "home"
+  | "overview"
+  | "products"
+  | "categories"
+  | "orders"
+  | "affiliates"
+  | "withdrawals"
+  | "shipping"
+  | "stats"
+  | "support";
+
+const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ElementType; color: string; bg: string }[] = [
+  { id: "home",        label: "Dashboard",    icon: LayoutDashboard, color: "text-blue-400",   bg: "bg-blue-500/10" },
+  { id: "products",    label: "Products",     icon: Package,         color: "text-violet-400", bg: "bg-violet-500/10" },
+  { id: "categories",  label: "Categories",   icon: Tag,             color: "text-cyan-400",   bg: "bg-cyan-500/10" },
+  { id: "orders",      label: "Orders",       icon: ShoppingBag,     color: "text-amber-400",  bg: "bg-amber-500/10" },
+  { id: "affiliates",  label: "Affiliates",   icon: Users,           color: "text-emerald-400",bg: "bg-emerald-500/10" },
+  { id: "withdrawals", label: "Withdrawals",  icon: Wallet,          color: "text-rose-400",   bg: "bg-rose-500/10" },
+  { id: "shipping",    label: "Livraison",    icon: Truck,           color: "text-orange-400", bg: "bg-orange-500/10" },
+  { id: "stats",       label: "Statistics",   icon: BarChart2,       color: "text-pink-400",   bg: "bg-pink-500/10" },
+  { id: "support",     label: "Support",      icon: LifeBuoy,        color: "text-teal-400",   bg: "bg-teal-500/10" },
+];
 
 function AdminPanel() {
   const { data: stats } = usePlatformStats();
@@ -825,7 +871,9 @@ function AdminPanel() {
   const { data: withdrawals = [] } = useWithdrawals();
   const { data: earningsChart = [] } = useEarningsChart();
 
-  const updateOrder = useUpdateOrderStatus();
+  const updateOrderStatus = useUpdateOrderStatus();
+  const updateOrder = useUpdateOrder();
+  const deleteOrder = useDeleteOrder();
   const updateWithdrawal = useUpdateWithdrawalStatus();
   const deleteProduct = useDeleteProduct();
   const updateProduct = useUpdateProduct();
@@ -838,14 +886,30 @@ function AdminPanel() {
 
   const { data: dbCategories = [] } = useCategories();
 
+  const { data: supportTickets = [] } = useSupportTickets();
+  const updateTicket = useUpdateTicketStatus();
+
   const [productDialog, setProductDialog] = useState<{ open: boolean; product?: Product | null }>({
     open: false,
   });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id?: string; name?: string }>({
     open: false,
   });
+  const [deleteOrderDialog, setDeleteOrderDialog] = useState<{ open: boolean; id?: string; label?: string }>({
+    open: false,
+  });
+  const [ticketDialog, setTicketDialog] = useState<{ open: boolean; ticket?: SupportTicket | null }>({
+    open: false,
+  });
+  const [ticketReply, setTicketReply] = useState("");
+  const [ticketStatusEdit, setTicketStatusEdit] = useState<TicketStatus>("open");
 
-  const { signOut } = useAuth();
+  const [activeSection, setActiveSection] = useState<AdminSection>("home");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [visibleProducts, setVisibleProducts] = useState(50);
+  const [visibleOrders, setVisibleOrders] = useState(50);
+
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -853,118 +917,270 @@ function AdminPanel() {
     navigate({ to: "/login" });
   };
 
+  const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending").length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const openTickets = supportTickets.filter((t: SupportTicket) => t.status === "open").length;
+
+  const currentNav = NAV_ITEMS.find((n) => n.id === activeSection);
+
   return (
-    <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-[1400px] px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Logo />
-            <Badge variant="outline" className="border-navy/30 text-primary font-semibold">
-              Admin
-            </Badge>
+    <div className="min-h-screen flex" style={{ background: "hsl(220 20% 7%)" }}>
+
+      {/* ── SIDEBAR ── */}
+      <aside
+        className="flex-shrink-0 flex flex-col border-r transition-all duration-300"
+        style={{
+          width: sidebarCollapsed ? 68 : 230,
+          background: "hsl(220 18% 10%)",
+          borderColor: "hsl(220 15% 16%)",
+        }}
+      >
+        {/* Sidebar Header */}
+        <div
+          className="h-16 flex items-center justify-between px-3 border-b flex-shrink-0"
+          style={{ borderColor: "hsl(220 15% 16%)" }}
+        >
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div
+                className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+              >
+                <Settings className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-bold text-sm text-white truncate">Control Panel</span>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Nav Items */}
+        <nav className="flex-1 py-3 space-y-0.5 overflow-y-auto px-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            const badge =
+              item.id === "orders" ? pendingOrders :
+              item.id === "withdrawals" ? pendingWithdrawals :
+              item.id === "support" ? openTickets : 0;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-150 group relative text-left ${
+                  isActive
+                    ? "bg-indigo-500/15 text-white"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-indigo-400" />
+                )}
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? item.bg : "bg-white/5 group-hover:bg-white/8"}`}>
+                  <Icon className={`h-4 w-4 ${isActive ? item.color : "text-slate-400 group-hover:text-slate-300"}`} />
+                </div>
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="text-sm font-medium truncate flex-1">{item.label}</span>
+                    {badge > 0 && (
+                      <span className="h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        {badge}
+                      </span>
+                    )}
+                  </>
+                )}
+                {sidebarCollapsed && badge > 0 && (
+                  <div className="absolute top-1 right-1 h-3 w-3 rounded-full bg-rose-500" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-2 border-t" style={{ borderColor: "hsl(220 15% 16%)" }}>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+          >
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/5">
+              <LogOut className="h-4 w-4" />
+            </div>
+            {!sidebarCollapsed && <span className="text-sm font-medium">Log out</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* Top Header */}
+        <header
+          className="h-16 flex items-center justify-between px-6 border-b flex-shrink-0 sticky top-0 z-20 backdrop-blur-xl"
+          style={{
+            background: "hsl(220 20% 7% / 0.9)",
+            borderColor: "hsl(220 15% 16%)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            {currentNav && (
+              <>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${currentNav.bg}`}>
+                  <currentNav.icon className={`h-4 w-4 ${currentNav.color}`} />
+                </div>
+                <div>
+                  <h1 className="text-sm font-semibold text-white leading-none">{currentNav.label}</h1>
+                  <p className="text-xs text-slate-500 mt-0.5">Admin Panel › {currentNav.label}</p>
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
+          <div className="flex items-center gap-3">
+            {/* Notification badge */}
+            {(pendingOrders + pendingWithdrawals + openTickets) > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <Bell className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-xs text-amber-400 font-medium">
+                  {pendingOrders + pendingWithdrawals + openTickets} pending
+                </span>
+              </div>
+            )}
+            <Button asChild variant="ghost" size="sm" className="text-slate-400 hover:text-white">
               <Link to="/dashboard">
-                <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to affiliate
+                <Home className="mr-1.5 h-4 w-4" /> Affiliate View
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-1.5" /> Log out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1400px] px-6 py-8 space-y-6">
-        <PageHeader
-          title="Admin Panel"
-          subtitle="Manage products, orders, affiliates and withdrawals."
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Active affiliates"
-            value={stats ? stats.active_affiliates.toLocaleString() : "..."}
-            icon={Users}
-            tone="brand"
-          />
-          <StatCard label="Products" value={products.length.toString()} icon={Package} />
-          <StatCard
-            label="Orders delivered"
-            value={stats ? stats.orders_delivered.toLocaleString() : "..."}
-            icon={ShoppingBag}
-            tone="success"
-          />
-          <StatCard
-            label="Commissions paid"
-            value={stats ? formatDZD(stats.commissions_paid) : "..."}
-            icon={Wallet}
-            tone="warning"
-          />
-        </div>
-
-        <Tabs defaultValue="products">
-          <TabsList className="bg-card border p-1 h-11 flex-wrap">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
-            <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-            <TabsTrigger value="shipping">Tarifs Livraison</TabsTrigger>
-            <TabsTrigger value="stats">Statistics</TabsTrigger>
-          </TabsList>
-
-          {/* ── Overview ── */}
-          <TabsContent value="overview" className="mt-4">
-            <div className="rounded-2xl border bg-card p-5">
-              <h2 className="font-semibold" dir="auto">
-                Platform activity
-              </h2>
-              <p className="text-sm text-muted-foreground">Orders delivered per month.</p>
-              {earningsChart.length === 0 ? (
-                <div className="h-[320px] flex items-center justify-center text-muted-foreground text-sm">
-                  No chart data yet.
-                </div>
-              ) : (
-                <ChartContainer
-                  config={{ orders: { label: "Orders" } }}
-                  className="h-[320px] w-full mt-4"
-                >
-                  <AreaChart data={earningsChart}>
-                    <defs>
-                      <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--brand-glow)" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="var(--brand-glow)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="4 4" opacity={0.4} />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} className="text-xs" />
-                    <YAxis tickLine={false} axisLine={false} className="text-xs" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Area
-                      type="monotone"
-                      dataKey="orders"
-                      stroke="var(--brand-glow)"
-                      fill="url(#ag)"
-                      strokeWidth={2.5}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              )}
+            <div className="h-8 w-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 text-xs font-bold">
+              A
             </div>
-          </TabsContent>
+          </div>
+        </header>
 
-          {/* ── Products ── */}
-          <TabsContent value="products" className="mt-4">
-            <div className="rounded-2xl border bg-card">
-              <div className="p-5 flex items-center justify-between">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+
+          {/* ── HOME / DASHBOARD ── */}
+          {activeSection === "home" && (
+            <div className="space-y-6">
+              {/* Welcome */}
+              <div className="rounded-2xl p-6 border" style={{ background: "linear-gradient(135deg, hsl(240 40% 15%), hsl(260 35% 12%))", borderColor: "hsl(240 30% 25%)" }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Welcome back, Admin 👋</h2>
+                    <p className="text-slate-400 mt-1 text-sm">Here's what's happening on your platform today.</p>
+                  </div>
+                  <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-white/5 px-3 py-2 rounded-lg border border-white/10">
+                    <Activity className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Platform Online</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stat Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: "Active Affiliates", value: stats?.active_affiliates?.toLocaleString() ?? "...", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+                  { label: "Total Products", value: products.length.toString(), icon: Package, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+                  { label: "Orders Delivered", value: stats?.orders_delivered?.toLocaleString() ?? "...", icon: ShoppingBag, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+                  { label: "Commissions Paid", value: stats ? formatDZD(stats.commissions_paid) : "...", icon: Wallet, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+                ].map((s) => (
+                  <div key={s.label} className={`rounded-2xl p-5 border ${s.border}`} style={{ background: "hsl(220 18% 11%)" }}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium">{s.label}</p>
+                        <p className={`mt-2 text-2xl font-bold ${s.color}`}>{s.value}</p>
+                      </div>
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${s.bg}`}>
+                        <s.icon className={`h-5 w-5 ${s.color}`} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* cPanel Tiles */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Quick Access</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {NAV_ITEMS.filter((n) => n.id !== "home").map((item) => {
+                    const Icon = item.icon;
+                    const badge =
+                      item.id === "orders" ? pendingOrders :
+                      item.id === "withdrawals" ? pendingWithdrawals : 0;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveSection(item.id)}
+                        className="group relative flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border text-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                        style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}
+                      >
+                        {badge > 0 && (
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            {badge}
+                          </span>
+                        )}
+                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${item.bg} group-hover:scale-110 transition-transform duration-200`}>
+                          <Icon className={`h-6 w-6 ${item.color}`} />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-200">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Recent Orders */}
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "hsl(220 15% 18%)" }}>
+                  <div>
+                    <h3 className="font-semibold text-white">Recent Orders</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">{orders.length} total orders</p>
+                  </div>
+                  <button onClick={() => setActiveSection("orders")} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                    View all <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid hsl(220 15% 18%)" }}>
+                        {["Order ID", "Customer", "Product", "Total", "Status"].map((h) => (
+                          <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.slice(0, 5).map((o) => (
+                        <tr key={o.id} className="hover:bg-white/2 transition-colors" style={{ borderBottom: "1px solid hsl(220 15% 14%)" }}>
+                          <td className="px-5 py-3 font-mono text-xs text-slate-400">{o.id.slice(0, 16)}…</td>
+                          <td className="px-5 py-3 text-slate-200 font-medium">{o.customer_name}</td>
+                          <td className="px-5 py-3 text-slate-400 max-w-[160px] truncate">{o.product_name}</td>
+                          <td className="px-5 py-3 text-white font-semibold">{formatDZD(o.selling_price * o.quantity)}</td>
+                          <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
+                        </tr>
+                      ))}
+                      {orders.length === 0 && (
+                        <tr><td colSpan={5} className="px-5 py-10 text-center text-slate-500">No orders yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── PRODUCTS ── */}
+          {activeSection === "products" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold" dir="auto">
-                    Products
-                  </h2>
-                  <p className="text-sm text-muted-foreground">{products.length} total</p>
+                  <h2 className="text-xl font-bold text-white">Products</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">{products.length} products in catalog</p>
                 </div>
                 <Button
                   className="gradient-brand text-brand-foreground shadow-brand"
@@ -973,75 +1189,249 @@ function AdminPanel() {
                   <Plus className="mr-1.5 h-4 w-4" /> Add product
                 </Button>
               </div>
-              <div className="overflow-x-auto">
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
+                        <TableHead className="text-slate-500">Product</TableHead>
+                        <TableHead className="text-slate-500">Category</TableHead>
+                        <TableHead className="text-slate-500">Price</TableHead>
+                        <TableHead className="text-slate-500">Status</TableHead>
+                        <TableHead className="text-slate-500 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-slate-500 py-12">
+                            No products yet. Click "Add product" to get started.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {products.slice(0, visibleProducts).map((p) => (
+                        <TableRow key={p.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <img src={getProductImage(p) ?? p.image} className="h-12 w-12 rounded-xl object-cover border border-white/10" alt="" />
+                              <div>
+                                <div className="font-medium text-slate-200">{p.name}</div>
+                                <div className="text-xs text-slate-500 line-clamp-1 max-w-[220px]">{p.description}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline" className="border-white/10 text-slate-400">{p.category}</Badge></TableCell>
+                          <TableCell className="font-semibold text-indigo-400">{formatDZD(p.price)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={p.is_active ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-slate-500/10 text-slate-500"}>
+                              {p.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => setProductDialog({ open: true, product: p })} className="text-slate-400 hover:text-white">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-rose-400" onClick={() => setDeleteDialog({ open: true, id: p.id, name: p.name })}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {visibleProducts < products.length && (
+                    <div className="flex justify-center p-4 border-t" style={{ borderColor: "hsl(220 15% 18%)" }}>
+                      <Button variant="outline" className="border-white/10 text-slate-300 hover:bg-white/5" onClick={() => setVisibleProducts(v => v + 50)}>
+                        Load More Products
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── CATEGORIES ── */}
+          {activeSection === "categories" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Categories</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Manage product categories and subcategories</p>
+              </div>
+              <CategoriesTab />
+            </div>
+          )}
+
+          {/* ── ORDERS ── */}
+          {activeSection === "orders" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">All Orders</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{orders.length} orders · {pendingOrders} pending</p>
+              </div>
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
+                        {["Order", "ID Review", "Product", "Customer", "Qty", "Base", "Total", "Commission", "Delivery", "Status", "Action", ""].map((h) => (
+                          <TableHead key={h} className="text-slate-500">{h}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.length === 0 && (
+                        <TableRow><TableCell colSpan={10} className="text-center text-slate-500 py-8">No orders found.</TableCell></TableRow>
+                      )}
+                      {orders.slice(0, visibleOrders).map((o) => (
+                        <TableRow key={o.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
+                          <TableCell className="font-mono text-xs text-slate-400">{o.id}</TableCell>
+                          <TableCell>
+                            <Input
+                              defaultValue={o.id_commande_review || ""}
+                              placeholder="ID..."
+                              className="h-8 text-xs min-w-[100px] bg-white/5 border-white/10"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (o.id_commande_review || "")) {
+                                  updateOrder.mutate({ id: o.id, id_commande_review: val || null } as any);
+                                  toast.success(`ID Review mis à jour`);
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="text-slate-200">{o.product_name}</TableCell>
+                          <TableCell className="text-slate-200">{o.customer_name}</TableCell>
+                          <TableCell className="text-slate-300">{o.quantity}</TableCell>
+                          <TableCell className="text-slate-400">{formatDZD(o.selling_price * o.quantity - (o.commission || 0))}</TableCell>
+                          <TableCell className="font-semibold text-white">{formatDZD(o.selling_price * o.quantity)}</TableCell>
+                          <TableCell className="font-semibold text-emerald-400">{formatDZD(o.commission)}</TableCell>
+                          <TableCell><Badge variant="outline" className="capitalize border-white/10 text-slate-400">{o.delivery_type || "N/A"}</Badge></TableCell>
+                          <TableCell><StatusBadge status={o.status} /></TableCell>
+                          <TableCell>
+                            <Select defaultValue={o.status} onValueChange={(v) => updateOrderStatus.mutate({ id: o.id, status: v as OrderStatus })}>
+                              <SelectTrigger className="h-8 w-[130px] bg-white/5 border-white/10 text-slate-300" disabled={updateOrderStatus.isPending}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(["pending", "confirmed", "shipped", "delivered", "cancelled"] as OrderStatus[]).map((s) => (
+                                  <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
+                              onClick={() => setDeleteOrderDialog({ open: true, id: o.id, label: `${o.customer_name} – ${o.product_name}` })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {visibleOrders < orders.length && (
+                    <div className="flex justify-center p-4 border-t" style={{ borderColor: "hsl(220 15% 18%)" }}>
+                      <Button variant="outline" className="border-white/10 text-slate-300 hover:bg-white/5" onClick={() => setVisibleOrders(v => v + 50)}>
+                        Load More Orders
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── AFFILIATES ── */}
+          {activeSection === "affiliates" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Affiliates</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{affiliates.length} registered affiliates</p>
+              </div>
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
+                      {["Affiliate", "Email", "Earnings", "Joined", "Status"].map((h) => (
+                        <TableHead key={h} className="text-slate-500">{h}</TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {products.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                          No products yet. Click "Add product" to get started.
-                        </TableCell>
-                      </TableRow>
+                    {affiliates.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center text-slate-500 py-8">No affiliates found.</TableCell></TableRow>
                     )}
-                    {products.map((p) => (
-                      <TableRow key={p.id}>
+                    {affiliates.map((a) => (
+                      <TableRow key={a.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <img
-                              src={p.image}
-                              className="h-12 w-12 rounded-xl object-cover border"
-                              alt=""
-                            />
+                            <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                              {a.name?.[0]?.toUpperCase() ?? "?"}
+                            </div>
                             <div>
-                              <div className="font-medium">{p.name}</div>
-                              <div className="text-xs text-muted-foreground line-clamp-1 max-w-[220px]">
-                                {p.description}
-                              </div>
+                              <div className="font-medium text-slate-200">{a.name}</div>
+                              <div className="text-xs text-slate-500 font-mono">{a.id.slice(0, 12)}…</div>
                             </div>
                           </div>
                         </TableCell>
+                        <TableCell className="text-slate-400">{a.email}</TableCell>
+                        <TableCell className="font-semibold text-emerald-400">{formatDZD(a.total_earnings)}</TableCell>
+                        <TableCell className="text-xs text-slate-500">{new Date(a.joined).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{p.category}</Badge>
+                          <Badge variant="outline" className={a.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}>
+                            {a.status}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="font-semibold text-primary">
-                          {formatDZD(p.price)}
-                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* ── WITHDRAWALS ── */}
+          {activeSection === "withdrawals" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Withdrawals</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{withdrawals.length} requests · {pendingWithdrawals} pending</p>
+              </div>
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
+                      {["Request ID", "Amount", "Method", "Requested", "Status", "Action"].map((h) => (
+                        <TableHead key={h} className={`text-slate-500 ${h === "Action" ? "text-right" : ""}`}>{h}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {withdrawals.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-slate-500 py-8">No withdrawals found.</TableCell></TableRow>
+                    )}
+                    {withdrawals.map((w) => (
+                      <TableRow key={w.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
+                        <TableCell className="font-mono text-xs text-slate-400">{w.id}</TableCell>
+                        <TableCell className="font-semibold text-white">{formatDZD(w.amount)}</TableCell>
+                        <TableCell className="text-slate-300">{w.method}</TableCell>
+                        <TableCell className="text-xs text-slate-500">{new Date(w.requested_at).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              p.is_active
-                                ? "bg-success/10 text-success border-success/20"
-                                : "bg-muted text-muted-foreground"
-                            }
-                          >
-                            {p.is_active ? "Active" : "Inactive"}
+                          <Badge variant="outline" className={`capitalize ${w.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : w.status === "rejected" ? "bg-rose-500/10 text-rose-400 border-rose-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
+                            {w.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setProductDialog({ open: true, product: p })}
-                          >
-                            <Pencil className="h-4 w-4" />
+                          <Button size="sm" variant="ghost" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10" disabled={w.status !== "pending"} onClick={() => updateWithdrawal.mutate({ id: w.id, status: "approved" })}>
+                            <Check className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => setDeleteDialog({ open: true, id: p.id, name: p.name })}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                          <Button size="sm" variant="ghost" className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" disabled={w.status !== "pending"} onClick={() => updateWithdrawal.mutate({ id: w.id, status: "rejected" })}>
+                            <X className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -1050,417 +1440,272 @@ function AdminPanel() {
                 </Table>
               </div>
             </div>
-          </TabsContent>
+          )}
 
-          {/* ── Categories ── */}
-          <TabsContent value="categories" className="mt-4">
-            <CategoriesTab />
-          </TabsContent>
-
-          {/* ── Orders ── */}
-          <TabsContent value="orders" className="mt-4">
-            <div className="rounded-2xl border bg-card">
-              <div className="p-5">
-                <h2 className="font-semibold" dir="auto">
-                  All orders
-                </h2>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Base Price</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Commission</TableHead>
-                      <TableHead>Delivery</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                          No orders found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {orders.slice(0, 10).map((o) => (
-                      <TableRow key={o.id}>
-                        <TableCell className="font-mono text-xs">{o.id}</TableCell>
-                        <TableCell>{o.product_name}</TableCell>
-                        <TableCell>{o.customer_name}</TableCell>
-                        <TableCell>{o.quantity}</TableCell>
-                        <TableCell>
-                          {formatDZD(o.selling_price * o.quantity - (o.commission || 0))}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatDZD(o.selling_price * o.quantity)}
-                        </TableCell>
-                        <TableCell className="font-semibold text-success">
-                          {formatDZD(o.commission)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {o.delivery_type || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={o.status} />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            defaultValue={o.status}
-                            onValueChange={(v) =>
-                              updateOrder.mutate({ id: o.id, status: v as OrderStatus })
-                            }
-                          >
-                            <SelectTrigger
-                              className="h-8 w-[130px]"
-                              disabled={updateOrder.isPending}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(
-                                [
-                                  "pending",
-                                  "confirmed",
-                                  "shipped",
-                                  "delivered",
-                                  "cancelled",
-                                ] as OrderStatus[]
-                              ).map((s) => (
-                                <SelectItem key={s} value={s} className="capitalize">
-                                  {s}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* ── Affiliates ── */}
-          <TabsContent value="affiliates" className="mt-4">
-            <div className="rounded-2xl border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Affiliate</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Earnings</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {affiliates.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No affiliates found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {affiliates.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <div className="font-medium">{a.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{a.id}</div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{a.email}</TableCell>
-                      <TableCell className="font-semibold">{formatDZD(a.total_earnings)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(a.joined).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            a.status === "active"
-                              ? "bg-success/10 text-success border-success/20"
-                              : "bg-warning/10 text-warning border-warning/20"
-                          }
-                        >
-                          {a.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          {/* ── Withdrawals ── */}
-          <TabsContent value="withdrawals" className="mt-4">
-            <div className="rounded-2xl border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Request</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Requested</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {withdrawals.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No withdrawals found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {withdrawals.map((w) => (
-                    <TableRow key={w.id}>
-                      <TableCell className="font-mono text-xs">{w.id}</TableCell>
-                      <TableCell className="font-semibold">{formatDZD(w.amount)}</TableCell>
-                      <TableCell>{w.method}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(w.requested_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {w.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-success"
-                          disabled={w.status !== "pending"}
-                          onClick={() => updateWithdrawal.mutate({ id: w.id, status: "approved" })}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          disabled={w.status !== "pending"}
-                          onClick={() => updateWithdrawal.mutate({ id: w.id, status: "rejected" })}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          {/* ── Statistics ── */}
-          <TabsContent value="stats" className="mt-4">
-            {(() => {
-              const validOrders = orders.filter((o) => o.status !== "cancelled");
-              const deliveredOrders = orders.filter((o) => o.status === "delivered");
-              const totalRevenue = validOrders.reduce(
-                (sum, o) => sum + o.selling_price * o.quantity,
-                0,
-              );
-              const avgOrderValue = validOrders.length > 0 ? totalRevenue / validOrders.length : 0;
-              const resolvedOrders = orders.filter(
-                (o) => o.status === "delivered" || o.status === "cancelled",
-              );
-              const deliveryRate =
-                resolvedOrders.length > 0
-                  ? (deliveredOrders.length / resolvedOrders.length) * 100
-                  : 0;
-              const wilayaCounts = orders.reduce(
-                (acc, o) => {
-                  acc[o.wilaya] = (acc[o.wilaya] || 0) + 1;
-                  return acc;
-                },
-                {} as Record<string, number>,
-              );
-              const topWilaya =
-                Object.entries(wilayaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
-              const topAffiliate =
-                [...affiliates].sort((a, b) => b.total_earnings - a.total_earnings)[0]?.name ||
-                "N/A";
-
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-2xl border bg-card p-6">
-                    <div className="text-sm text-muted-foreground">Avg order value</div>
-                    <div className="mt-2 text-3xl font-bold text-gradient-brand">
-                      {formatDZD(avgOrderValue)}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border bg-card p-6">
-                    <div className="text-sm text-muted-foreground">Delivery success rate</div>
-                    <div className="mt-2 text-3xl font-bold text-gradient-brand">
-                      {deliveryRate.toFixed(1)}%
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border bg-card p-6">
-                    <div className="text-sm text-muted-foreground">Top wilaya</div>
-                    <div className="mt-2 text-3xl font-bold text-primary">{topWilaya}</div>
-                  </div>
-                  <div className="rounded-2xl border bg-card p-6">
-                    <div className="text-sm text-muted-foreground">Top affiliate</div>
-                    <div className="mt-2 text-3xl font-bold text-primary">{topAffiliate}</div>
-                  </div>
-                </div>
-              );
-            })()}
-          </TabsContent>
-
-          {/* ── Shipping Rates ── */}
-          <TabsContent value="shipping" className="mt-4">
-            <div className="rounded-2xl border bg-card">
-              <div className="p-5 flex items-center justify-between">
+          {/* ── STATISTICS ── */}
+          {activeSection === "stats" && (() => {
+            const validOrders = orders.filter((o) => o.status !== "cancelled");
+            const deliveredOrders = orders.filter((o) => o.status === "delivered");
+            const totalRevenue = validOrders.reduce((sum, o) => sum + o.selling_price * o.quantity, 0);
+            const avgOrderValue = validOrders.length > 0 ? totalRevenue / validOrders.length : 0;
+            const resolvedOrders = orders.filter((o) => o.status === "delivered" || o.status === "cancelled");
+            const deliveryRate = resolvedOrders.length > 0 ? (deliveredOrders.length / resolvedOrders.length) * 100 : 0;
+            const wilayaCounts = orders.reduce((acc, o) => { acc[o.wilaya] = (acc[o.wilaya] || 0) + 1; return acc; }, {} as Record<string, number>);
+            const topWilaya = (Object.entries(wilayaCounts) as [string, number][]).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+            const topAffiliate = [...affiliates].sort((a, b) => b.total_earnings - a.total_earnings)[0]?.name || "N/A";
+            return (
+              <div className="space-y-4">
                 <div>
-                  <h2 className="font-semibold" dir="auto">
-                    Tarifs de livraison
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Modifier les prix de livraison par wilaya (Domicile et Bureau).
-                  </p>
+                  <h2 className="text-xl font-bold text-white">Statistics</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">Platform performance overview</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: "Avg Order Value", value: formatDZD(avgOrderValue), icon: TrendingUp, color: "text-violet-400", bg: "bg-violet-500/10" },
+                    { label: "Delivery Success Rate", value: `${deliveryRate.toFixed(1)}%`, icon: Activity, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                    { label: "Top Wilaya", value: topWilaya, icon: MapPin, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+                    { label: "Top Affiliate", value: topAffiliate, icon: Users, color: "text-amber-400", bg: "bg-amber-500/10" },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-2xl border p-6 flex items-center gap-5" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                        <s.icon className={`h-7 w-7 ${s.color}`} />
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-500">{s.label}</div>
+                        <div className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Chart */}
+                <div className="rounded-2xl border p-5" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                  <h3 className="font-semibold text-white mb-1">Platform Activity</h3>
+                  <p className="text-sm text-slate-500">Orders delivered per month.</p>
+                  {earningsChart.length === 0 ? (
+                    <div className="h-[280px] flex items-center justify-center text-slate-500 text-sm">No chart data yet.</div>
+                  ) : (
+                    <ChartContainer config={{ orders: { label: "Orders" } }} className="h-[280px] w-full mt-4">
+                      <AreaChart data={earningsChart}>
+                        <defs>
+                          <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} strokeDasharray="4 4" opacity={0.2} />
+                        <XAxis dataKey="month" tickLine={false} axisLine={false} className="text-xs" tick={{ fill: "#64748b" }} />
+                        <YAxis tickLine={false} axisLine={false} className="text-xs" tick={{ fill: "#64748b" }} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Area type="monotone" dataKey="orders" stroke="#6366f1" fill="url(#cg)" strokeWidth={2.5} />
+                      </AreaChart>
+                    </ChartContainer>
+                  )}
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-14">N°</TableHead>
-                      <TableHead>Wilaya</TableHead>
-                      <TableHead>Adresse du bureau</TableHead>
-                      <TableHead>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          Délai
-                        </span>
-                      </TableHead>
-                      <TableHead>Domicile (DZD)</TableHead>
-                      <TableHead>Bureau (DZD)</TableHead>
-                      <TableHead>Disponible</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingShipping && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                          Chargement des tarifs...
-                        </TableCell>
+            );
+          })()}
+
+          {/* ── SHIPPING ── */}
+          {activeSection === "shipping" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Tarifs de Livraison</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Modifier les prix par wilaya (Domicile et Bureau)</p>
+              </div>
+              <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
+                        <TableHead className="text-slate-500 w-14">N°</TableHead>
+                        <TableHead className="text-slate-500">Wilaya</TableHead>
+                        <TableHead className="text-slate-500">Adresse du bureau</TableHead>
+                        <TableHead className="text-slate-500"><span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Délai</span></TableHead>
+                        <TableHead className="text-slate-500">Domicile (DZD)</TableHead>
+                        <TableHead className="text-slate-500">Bureau (DZD)</TableHead>
+                        <TableHead className="text-slate-500">Disponible</TableHead>
                       </TableRow>
-                    )}
-                    {shippingRates.map((rate) => {
-                      const wilayaName = WILAYAS[parseInt(rate.wilaya_id, 10) - 1] || "Inconnu";
-                      return (
-                        <TableRow
-                          key={rate.wilaya_id}
-                          className={!rate.is_available ? "opacity-50" : ""}
-                        >
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {rate.wilaya_id}
-                          </TableCell>
-                          <TableCell className="font-semibold">{wilayaName}</TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="h-3.5 w-3.5 text-brand flex-shrink-0" />
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingShipping && (
+                        <TableRow><TableCell colSpan={7} className="text-center py-10 text-slate-500">Chargement des tarifs...</TableCell></TableRow>
+                      )}
+                      {shippingRates.map((rate) => {
+                        const wilayaName = WILAYAS[parseInt(rate.wilaya_id, 10) - 1] || "Inconnu";
+                        return (
+                          <TableRow key={rate.wilaya_id} className={`hover:bg-white/2 ${!rate.is_available ? "opacity-50" : ""}`} style={{ borderColor: "hsl(220 15% 14%)" }}>
+                            <TableCell className="font-mono text-xs text-slate-500">{rate.wilaya_id}</TableCell>
+                            <TableCell className="font-semibold text-slate-200">{wilayaName}</TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
+                                <Input
+                                  key={`addr-${rate.wilaya_id}-${(rate as any).office_address ?? "none"}`}
+                                  defaultValue={(rate as any).office_address ?? ""}
+                                  placeholder="—"
+                                  className="h-8 text-xs min-w-[200px] bg-white/5 border-white/10"
+                                  onBlur={(e) => {
+                                    const val = e.target.value.trim();
+                                    if (val !== ((rate as any).office_address ?? "")) {
+                                      updateShippingRate.mutate({ wilaya_id: rate.wilaya_id, office_address: val } as any);
+                                      toast.success(`Adresse mise à jour pour ${wilayaName}`);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell><span className="text-xs text-slate-500 whitespace-nowrap">{(rate as any).delivery_time ?? "—"}</span></TableCell>
+                            <TableCell>
                               <Input
-                                key={`addr-${rate.wilaya_id}-${(rate as any).office_address ?? "none"}`}
-                                defaultValue={(rate as any).office_address ?? ""}
-                                placeholder="—"
-                                className="h-8 text-xs min-w-[240px]"
+                                key={`home-${rate.wilaya_id}-${rate.home_delivery}`}
+                                type="number" defaultValue={rate.home_delivery}
+                                className="w-24 h-9 bg-white/5 border-white/10"
                                 onBlur={(e) => {
-                                  const val = e.target.value.trim();
-                                  if (val !== ((rate as any).office_address ?? "")) {
-                                    updateShippingRate.mutate({
-                                      wilaya_id: rate.wilaya_id,
-                                      office_address: val,
-                                    } as any);
-                                    toast.success(`Adresse mise à jour pour ${wilayaName}`);
+                                  const val = Number(e.target.value);
+                                  if (val !== rate.home_delivery) {
+                                    updateShippingRate.mutate({ wilaya_id: rate.wilaya_id, home_delivery: val });
+                                    toast.success(`Tarif domicile mis à jour pour ${wilayaName}`);
                                   }
                                 }}
                               />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {(rate as any).delivery_time ?? "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              key={`home-${rate.wilaya_id}-${rate.home_delivery}`}
-                              type="number"
-                              defaultValue={rate.home_delivery}
-                              className="w-24 h-9"
-                              onBlur={(e) => {
-                                const val = Number(e.target.value);
-                                if (val !== rate.home_delivery) {
-                                  updateShippingRate.mutate({
-                                    wilaya_id: rate.wilaya_id,
-                                    home_delivery: val,
-                                  });
-                                  toast.success(`Tarif domicile mis à jour pour ${wilayaName}`);
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              key={`desk-${rate.wilaya_id}-${rate.desk_delivery}`}
-                              type="number"
-                              defaultValue={rate.desk_delivery}
-                              className="w-24 h-9"
-                              onBlur={(e) => {
-                                const val = Number(e.target.value);
-                                if (val !== rate.desk_delivery) {
-                                  updateShippingRate.mutate({
-                                    wilaya_id: rate.wilaya_id,
-                                    desk_delivery: val,
-                                  });
-                                  toast.success(`Tarif bureau mis à jour pour ${wilayaName}`);
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <select
-                              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                              defaultValue={rate.is_available ? "oui" : "non"}
-                              onChange={(e) => {
-                                const isAvail = e.target.value === "oui";
-                                updateShippingRate.mutate({
-                                  wilaya_id: rate.wilaya_id,
-                                  is_available: isAvail,
-                                });
-                                toast.success(`Disponibilité mise à jour pour ${wilayaName}`);
-                              }}
-                            >
-                              <option value="oui">Oui</option>
-                              <option value="non">Non</option>
-                            </select>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                key={`desk-${rate.wilaya_id}-${rate.desk_delivery}`}
+                                type="number" defaultValue={rate.desk_delivery}
+                                className="w-24 h-9 bg-white/5 border-white/10"
+                                onBlur={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (val !== rate.desk_delivery) {
+                                    updateShippingRate.mutate({ wilaya_id: rate.wilaya_id, desk_delivery: val });
+                                    toast.success(`Tarif bureau mis à jour pour ${wilayaName}`);
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <select
+                                className="h-9 rounded-md border bg-white/5 border-white/10 px-3 py-1 text-sm text-slate-300"
+                                defaultValue={rate.is_available ? "oui" : "non"}
+                                onChange={(e) => {
+                                  updateShippingRate.mutate({ wilaya_id: rate.wilaya_id, is_available: e.target.value === "oui" });
+                                  toast.success(`Disponibilité mise à jour pour ${wilayaName}`);
+                                }}
+                              >
+                                <option value="oui">Oui</option>
+                                <option value="non">Non</option>
+                              </select>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
-      </main>
+          )}
+          {/* ── SUPPORT TICKETS ── */}
+          {activeSection === "support" && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Tickets de support</h2>
+                  <p className="text-slate-400 text-sm mt-0.5">
+                    {supportTickets.length} ticket{supportTickets.length !== 1 ? "s" : ""} —
+                    {" "}{openTickets} ouvert{openTickets !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
 
-      {/* ── Product Dialog (Add/Edit) ── */}
+              {/* Stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: "Ouverts", value: openTickets, color: "text-amber-400", bg: "bg-amber-500/10" },
+                  { label: "En cours", value: supportTickets.filter((t: SupportTicket) => t.status === "in_progress").length, color: "text-blue-400", bg: "bg-blue-500/10" },
+                  { label: "Résolus", value: supportTickets.filter((t: SupportTicket) => t.status === "resolved").length, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                  { label: "Fermés", value: supportTickets.filter((t: SupportTicket) => t.status === "closed").length, color: "text-slate-400", bg: "bg-slate-500/10" },
+                ].map((s) => (
+                  <div key={s.label} className={`rounded-2xl border p-4 ${s.bg}`} style={{ borderColor: "hsl(220 15% 20%)" }}>
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tickets list */}
+              {supportTickets.length === 0 ? (
+                <div className="rounded-2xl border border-dashed p-16 text-center" style={{ borderColor: "hsl(220 15% 20%)" }}>
+                  <LifeBuoy className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm">Aucun ticket soumis pour l'instant.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {supportTickets.map((ticket: SupportTicket) => {
+                    const statusConfig: Record<TicketStatus, { label: string; color: string; bg: string }> = {
+                      open:        { label: "Ouvert",   color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30" },
+                      in_progress: { label: "En cours", color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30" },
+                      resolved:    { label: "Résolu",   color: "text-emerald-400",bg: "bg-emerald-500/15 border-emerald-500/30" },
+                      closed:      { label: "Fermé",    color: "text-slate-400",  bg: "bg-slate-500/15 border-slate-500/30" },
+                    };
+                    const cfg = statusConfig[ticket.status];
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="rounded-2xl border p-5 flex items-start gap-4 hover:border-indigo-500/30 transition-colors cursor-pointer"
+                        style={{ background: "hsl(220 18% 12%)", borderColor: "hsl(220 15% 20%)" }}
+                        onClick={() => {
+                          setTicketDialog({ open: true, ticket });
+                          setTicketReply(ticket.admin_reply || "");
+                          setTicketStatusEdit(ticket.status);
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div className="h-10 w-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <MessageSquare className="h-5 w-5 text-teal-400" />
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="font-semibold text-white text-sm truncate">{ticket.subject}</span>
+                            <span className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.color}`}>
+                              {cfg.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-1.5">{ticket.description}</p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-[11px] text-slate-500">
+                              {ticket.affiliate_name || ticket.affiliate_email || "Affilié inconnu"}
+                            </span>
+                            <span className="text-[11px] text-slate-600">·</span>
+                            <span className="text-[11px] text-slate-500">
+                              {new Date(ticket.created_at).toLocaleDateString("fr-DZ", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                            {ticket.admin_reply && (
+                              <>
+                                <span className="text-[11px] text-slate-600">·</span>
+                                <span className="text-[11px] text-emerald-400">Répondu</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Arrow */}
+                        <ChevronRight className="h-4 w-4 text-slate-600 flex-shrink-0 mt-3" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+        </main>
+      </div>
+
+      {/* ── Dialogs ── */}
       {productDialog.open && (
         <ProductDialog
           open={productDialog.open}
@@ -1470,17 +1715,12 @@ function AdminPanel() {
         />
       )}
 
-      {/* ── Delete Confirmation ── */}
-      <AlertDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => !open && setDeleteDialog({ open: false })}
-      >
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete product?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{deleteDialog.name}</strong> from the catalog.
-              This action cannot be undone.
+              This will permanently delete <strong>{deleteDialog.name}</strong> from the catalog. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1490,10 +1730,7 @@ function AdminPanel() {
               onClick={() => {
                 if (!deleteDialog.id) return;
                 deleteProduct.mutate(deleteDialog.id, {
-                  onSuccess: () => {
-                    toast.success("Product deleted.");
-                    setDeleteDialog({ open: false });
-                  },
+                  onSuccess: () => { toast.success("Product deleted."); setDeleteDialog({ open: false }); },
                   onError: (err: any) => toast.error("Delete failed: " + err.message),
                 });
               }}
@@ -1503,6 +1740,148 @@ function AdminPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={deleteOrderDialog.open} onOpenChange={(open) => !open && setDeleteOrderDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the order for <strong>{deleteOrderDialog.label}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteOrderDialog.id) return;
+                deleteOrder.mutate(deleteOrderDialog.id, {
+                  onSuccess: () => { toast.success("Order deleted."); setDeleteOrderDialog({ open: false }); },
+                  onError: (err: any) => toast.error("Delete failed: " + err.message),
+                });
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Ticket Response Dialog ── */}
+      <Dialog
+        open={ticketDialog.open}
+        onOpenChange={(open) => !open && setTicketDialog({ open: false })}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LifeBuoy className="h-5 w-5 text-teal-400" />
+              Ticket : {ticketDialog.ticket?.subject}
+            </DialogTitle>
+          </DialogHeader>
+
+          {ticketDialog.ticket && (
+            <div className="space-y-4 py-2">
+              {/* Affiliate info */}
+              <div className="rounded-xl bg-muted/50 p-3 space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Affilié</p>
+                <p className="text-sm font-semibold">
+                  {ticketDialog.ticket.affiliate_name || "Inconnu"}
+                </p>
+                {ticketDialog.ticket.affiliate_email && (
+                  <p className="text-xs text-muted-foreground">{ticketDialog.ticket.affiliate_email}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {new Date(ticketDialog.ticket.created_at).toLocaleDateString("fr-DZ", {
+                    day: "2-digit", month: "long", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Description du problème</Label>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm whitespace-pre-wrap leading-relaxed">
+                  {ticketDialog.ticket.description}
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="ticket-status-admin">Statut</Label>
+                <select
+                  id="ticket-status-admin"
+                  value={ticketStatusEdit}
+                  onChange={(e) => setTicketStatusEdit(e.target.value as TicketStatus)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="open">Ouvert</option>
+                  <option value="in_progress">En cours</option>
+                  <option value="resolved">Résolu</option>
+                  <option value="closed">Fermé</option>
+                </select>
+              </div>
+
+              {/* Admin reply */}
+              <div className="space-y-2">
+                <Label htmlFor="ticket-reply-admin">Réponse admin</Label>
+                <Textarea
+                  id="ticket-reply-admin"
+                  value={ticketReply}
+                  onChange={(e) => setTicketReply(e.target.value)}
+                  placeholder="Rédigez votre réponse à l'affilié…"
+                  className="min-h-[120px] resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTicketDialog({ open: false })}
+            >
+              Annuler
+            </Button>
+            <Button
+              className="gradient-brand text-brand-foreground shadow-brand"
+              disabled={updateTicket.isPending}
+              onClick={() => {
+                if (!ticketDialog.ticket) return;
+                updateTicket.mutate(
+                  {
+                    id: ticketDialog.ticket.id,
+                    status: ticketStatusEdit,
+                    admin_reply: ticketReply || undefined,
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success("Ticket mis à jour !");
+                      setTicketDialog({ open: false });
+                    },
+                    onError: (err: any) => toast.error("Erreur : " + err.message),
+                  }
+                );
+              }}
+            >
+              {updateTicket.isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Enregistrement…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <SendHorizontal className="h-4 w-4" />
+                  Enregistrer la réponse
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
+

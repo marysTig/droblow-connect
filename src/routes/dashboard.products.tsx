@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { PageHeader } from "@/components/dashboard/shared";
-import { formatDZD, useProducts, useCategories } from "@/lib/queries";
+import { formatDZD, getProductImage, useProducts, useCategories } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, ImageIcon } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -15,7 +16,54 @@ import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart-context";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/dashboard/products")({ component: ProductsPage });
+function ProductImageWithLoading({ src, alt, category }: { src: string | null; alt: string; category?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  
+  if (!src) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-muted absolute inset-0">
+        <ImageIcon className="w-12 h-12 text-muted-foreground/40" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Placeholder affiché tant que l'image n'est pas chargée (pour la catégorie Promotion ou toutes) */}
+      {!loaded && !error && (
+        <div className="h-full w-full flex items-center justify-center bg-muted absolute inset-0 z-0">
+          <ImageIcon className="w-12 h-12 text-muted-foreground/40 animate-pulse" />
+        </div>
+      )}
+      {error && (
+        <div className="h-full w-full flex items-center justify-center bg-muted absolute inset-0 z-0">
+          <ImageIcon className="w-12 h-12 text-muted-foreground/40" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setError(true);
+          setLoaded(true);
+        }}
+        className={`h-full w-full object-cover transition-all duration-500 z-10 relative ${loaded && !error ? 'opacity-100 group-hover:scale-105' : 'opacity-0'}`}
+      />
+    </>
+  );
+}
+
+const searchSchema = z.object({
+  q: z.string().optional(),
+});
+
+export const Route = createFileRoute("/dashboard/products")({
+  component: ProductsPage,
+  validateSearch: searchSchema,
+});
 
 function ProductsPage() {
   const { t } = useI18n();
@@ -43,11 +91,21 @@ function ProductsPage() {
     }),
   ];
 
+  const { q } = Route.useSearch();
+  const searchQuery = q || "";
+
   // Exact match against product category field (both trimmed)
   const filteredProducts = products.filter((p) => {
-    if (selectedCategory === "All") return true;
-    return (p.category ?? "").trim() === selectedCategory.trim();
+    if (selectedCategory !== "All" && (p.category ?? "").trim() !== selectedCategory.trim()) {
+      return false;
+    }
+    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
   });
+
+  const [visibleCount, setVisibleCount] = useState(24);
 
   return (
     <div className="space-y-6">
@@ -79,7 +137,10 @@ function ProductsPage() {
                     >
                       <div
                         className={`flex flex-col items-center group cursor-pointer h-full transition-opacity duration-300 ${isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
-                        onClick={() => setSelectedCategory(cat.id === "all" ? "All" : cat.name)}
+                        onClick={() => {
+                          setSelectedCategory(cat.id === "all" ? "All" : cat.name);
+                          setVisibleCount(24); // Reset visible count on category change
+                        }}
                       >
                         <div
                           className={`relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-card shadow-sm hover:shadow-md flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 ${isSelected ? "ring-2 ring-success shadow-md -translate-y-1" : ""}`}
@@ -132,75 +193,88 @@ function ProductsPage() {
       ) : filteredProducts.length === 0 ? (
         <div className="text-center p-12 text-muted-foreground">{t("products_empty")}</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredProducts.map((p) => (
-            <div
-              key={p.id}
-              className="group rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col"
-            >
-              {/* Image — clickable to product page */}
-              <Link
-                to="/product/$productId"
-                params={{ productId: p.id }}
-                style={{ textDecoration: "none", color: "inherit" }}
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredProducts.slice(0, visibleCount).map((p) => (
+              <div
+                key={p.id}
+                className="group rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col"
               >
-                <div className="aspect-square overflow-hidden bg-muted relative">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <span className="absolute top-3 left-3 rounded-full bg-background/90 backdrop-blur px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider">
-                    {p.category}
-                  </span>
-                </div>
-                <div className="p-4 space-y-2">
-                  <h3 className="font-semibold leading-tight" dir="auto">
-                    {p.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs text-muted-foreground">Prix</span>
-                    {p.is_active ? (
-                      <span className="text-base font-bold text-gradient-brand">
-                        {formatDZD(p.price)}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-bold text-destructive">Rupture</span>
-                    )}
+                {/* Image — clickable to product page */}
+                <Link
+                  to="/product/$productId"
+                  params={{ productId: p.id }}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <div className="aspect-square overflow-hidden bg-muted relative">
+                    <ProductImageWithLoading 
+                      src={getProductImage(p)} 
+                      alt={p.name} 
+                      category={p.category} 
+                    />
+                    <span className="absolute top-3 left-3 rounded-full bg-background/90 backdrop-blur px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider z-20">
+                      {p.category}
+                    </span>
                   </div>
-                </div>
-              </Link>
+                  <div className="p-4 space-y-2">
+                    <h3 className="font-semibold leading-tight" dir="auto">
+                      {p.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-muted-foreground">Prix</span>
+                      {p.is_active ? (
+                        <span className="text-base font-bold text-gradient-brand">
+                          {formatDZD(p.price)}
+                        </span>
+                      ) : (
+                        <span className="text-sm font-bold text-destructive">Rupture</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
 
-              {/* Add to cart button */}
-              <div className="px-4 pb-4 mt-auto">
-                {p.is_active ? (
-                  <Button
-                    size="sm"
-                    className="w-full gradient-brand text-brand-foreground shadow-brand"
-                    onClick={() => {
-                      addToCart({ id: p.id, name: p.name, image: p.image, price: p.price });
-                      toast.success("Produit ajouté au panier");
-                    }}
-                  >
-                    <ShoppingBag className="mr-1.5 h-4 w-4" />
-                    {t("products_add_cart")}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="w-full border-destructive/20 text-destructive bg-destructive/5"
-                  >
-                    {t("product_card_unavailable")}
-                  </Button>
-                )}
+                {/* Add to cart button */}
+                <div className="px-4 pb-4 mt-auto">
+                  {p.is_active ? (
+                    <Button
+                      size="sm"
+                      className="w-full gradient-brand text-brand-foreground shadow-brand"
+                      onClick={() => {
+                        addToCart({ id: p.id, name: p.name, image: getProductImage(p) ?? p.image, price: p.price });
+                        toast.success("Produit ajouté au panier");
+                      }}
+                    >
+                      <ShoppingBag className="mr-1.5 h-4 w-4" />
+                      {t("products_add_cart")}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="w-full border-destructive/20 text-destructive bg-destructive/5"
+                    >
+                      {t("product_card_unavailable")}
+                    </Button>
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
+
+          {visibleCount < filteredProducts.length && (
+            <div className="flex justify-center pt-8">
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto"
+                onClick={() => setVisibleCount(v => v + 24)}
+              >
+                Afficher plus
+              </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Package,
@@ -11,6 +11,7 @@ import {
   Shield,
   LogOut,
   Truck,
+  LifeBuoy,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart-context";
@@ -37,6 +38,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function DashboardLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchState = useSearch({ strict: false }) as { q?: string };
+  const searchStr = searchState.q || "";
   const isActive = (u: string) => (u === "/dashboard" ? pathname === u : pathname.startsWith(u));
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -47,9 +50,9 @@ export function DashboardLayout() {
     { title: t("sidebar_products"), url: "/dashboard/products", icon: Package },
     { title: t("sidebar_orders"), url: "/dashboard/orders", icon: ShoppingBag },
     { title: t("sidebar_earnings"), url: "/dashboard/earnings", icon: Wallet },
-    { title: t("sidebar_withdrawals"), url: "/dashboard/withdrawals", icon: ArrowDownToLine },
     { title: t("sidebar_shipping"), url: "/dashboard/shipping", icon: Truck },
     { title: t("sidebar_profile"), url: "/dashboard/profile", icon: UserRound },
+    { title: "Support", url: "/dashboard/support", icon: LifeBuoy },
   ];
 
   const adminNav = [{ title: t("sidebar_admin_panel"), url: "/admin", icon: Shield }];
@@ -141,13 +144,19 @@ export function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-30 h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center gap-3 px-4 md:px-6">
             <SidebarTrigger />
-            <div className="relative flex-1 max-w-md hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("sidebar_search")}
-                className="pl-9 h-10 bg-muted/50 border-transparent focus-visible:bg-background"
-              />
-            </div>
+            {pathname === "/dashboard/products" ? (
+              <div className="relative flex-1 max-w-md hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchStr}
+                  onChange={(e) => navigate({ to: "/dashboard/products", search: (prev: any) => ({ ...prev, q: e.target.value }), replace: true })}
+                  placeholder={t("sidebar_search")}
+                  className="pl-9 h-10 bg-muted/50 border-transparent focus-visible:bg-background"
+                />
+              </div>
+            ) : (
+              <div className="flex-1 max-w-md hidden md:block" />
+            )}
             <div className="flex-1 md:hidden" />
             <LanguageSwitcher />
             {/* Cart icon – only on /dashboard/products */}

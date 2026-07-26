@@ -6,6 +6,28 @@ export function formatDZD(n: number) {
   return new Intl.NumberFormat("fr-DZ").format(Math.round(n)) + " DZD";
 }
 
+/**
+ * Résout l'image à afficher pour un produit.
+ * Pour les produits "Promotion" : priorité à images[1] (index 1),
+ * puis p.image, sinon null (afficher un placeholder).
+ * Pour les autres catégories : p.image en priorité, puis images[0], sinon null.
+ */
+export function getProductImage(p: {
+  image?: string | null;
+  images?: string[] | null;
+  category?: string | null;
+}): string | null {
+  const isPromo = (p.category ?? "").toLowerCase().trim() === "promotion";
+  if (isPromo) {
+    return (
+      (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] || null : null)
+      || p.image
+      || null
+    );
+  }
+  return p.image || (Array.isArray(p.images) ? p.images.find((img) => !!img) ?? null : null) || null;
+}
+
 // ─── Categories ──────────────────────────────────────────────────
 export function useCategories() {
   return useQuery({
@@ -76,29 +98,46 @@ export function useProducts() {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      let allProducts: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
+      // First fetch to get count and first page
+      const { data: firstPage, count, error: countError } = await supabase
+        .from("products")
+        .select("*", { count: "exact" })
+        .order("price", { ascending: true })
+        .range(0, 999);
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+      if (countError) throw countError;
 
-        if (error) throw error;
-
-        if (data) {
-          allProducts = [...allProducts, ...data];
-          if (data.length < pageSize) {
-            hasMore = false;
-          } else {
-            page++;
+      let allProducts = [...(firstPage || [])];
+      
+      if (count && count > 1000) {
+        const totalPages = Math.ceil(count / 1000);
+        
+        // Fetch pages sequentially in chunks of 2 to avoid overwhelming the database (500 error)
+        for (let page = 1; page < totalPages; page += 2) {
+          const promises = [];
+          promises.push(
+            supabase
+              .from("products")
+              .select("*")
+              .order("price", { ascending: true })
+              .range(page * 1000, (page + 1) * 1000 - 1)
+          );
+          
+          if (page + 1 < totalPages) {
+            promises.push(
+              supabase
+                .from("products")
+                .select("*")
+                .order("price", { ascending: true })
+                .range((page + 1) * 1000, (page + 2) * 1000 - 1)
+            );
           }
-        } else {
-          hasMore = false;
+          
+          const results = await Promise.all(promises);
+          for (const { data, error } of results) {
+            if (error) throw error;
+            if (data) allProducts = [...allProducts, ...data];
+          }
         }
       }
 
@@ -210,9 +249,17 @@ export function usePlatformStats() {
   return useQuery({
     queryKey: ["platform_stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("platform_stats").select("*").single();
+      const { data, error } = await supabase.from("platform_stats").select("*").maybeSingle();
       if (error) throw error;
-      return data;
+      return data || {
+        total_sales: 0,
+        active_affiliates: 0,
+        conversion_rate: 0,
+        monthly_growth: 0,
+        products_count: 0,
+        orders_delivered: 0,
+        commissions_paid: 0,
+      };
     },
   });
 }
@@ -256,9 +303,12 @@ export function useCreateOrder() {
       phone: string;
       wilaya: string;
       commune?: string;
+      address?: string;
       delivery_type?: "home" | "desk" | null;
       delivery_price?: number;
       affiliate_id?: string;
+      affiliate_name?: string | null;
+      status?: OrderStatus;
     }) => {
       const { error } = await supabase.from("orders").insert(order);
       if (error) throw error;
@@ -282,6 +332,7 @@ export function useUpdateOrder() {
       phone?: string;
       wilaya?: string;
       commune?: string;
+      id_commande_review?: string;
     }) => {
       const { error } = await supabase.from("orders").update(fields).eq("id", id);
       if (error) throw error;
@@ -326,6 +377,19 @@ export function useAffiliateProfile(id?: string) {
       return data;
     },
     enabled: !!id,
+  });
+}
+
+export function useUpdateAffiliateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...fields }: { id: string; payout_method?: string; account_number?: string }) => {
+      const { error } = await supabase.from("affiliates").update(fields).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["affiliate", variables.id] });
+    },
   });
 }
 
@@ -429,5 +493,64 @@ export function useUpdateShippingRate() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shipping_rates"] }),
+  });
+}
+
+// ─── Support Tickets ─────────────────────────────────────────────
+export function useSupportTickets(affiliateId?: string) {
+  return useQuery({
+    queryKey: ["support_tickets", affiliateId],
+    queryFn: async () => {
+      let query = supabase
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (affiliateId) query = query.eq("affiliate_id", affiliateId);
+      const { data, error } = await query;
+      if (error) {
+        console.warn("[support_tickets] Query failed:", error.message);
+        return [];
+      }
+      return data ?? [];
+    },
+  });
+}
+
+export function useCreateSupportTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ticket: {
+      affiliate_id: string;
+      affiliate_name: string;
+      affiliate_email: string;
+      subject: string;
+      description: string;
+    }) => {
+      const { error } = await supabase.from("support_tickets").insert(ticket);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["support_tickets"] }),
+  });
+}
+
+export function useUpdateTicketStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+      admin_reply,
+    }: {
+      id: string;
+      status?: string;
+      admin_reply?: string;
+    }) => {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ ...(status && { status }), ...(admin_reply !== undefined && { admin_reply }) })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["support_tickets"] }),
   });
 }

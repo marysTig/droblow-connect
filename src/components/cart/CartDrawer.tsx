@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDZD, useShippingRates, useCreateOrder } from "@/lib/queries";
+import { formatDZD, getProductImage, useShippingRates, useCreateOrder } from "@/lib/queries";
 import { WILAYAS, WILAYA_OPTIONS } from "@/lib/constants";
 import {
   Minus,
@@ -153,6 +153,9 @@ export function CartDrawer() {
           address: deliveryType === "desk" ? (shippingRate as any).office_address || "" : address,
           delivery_type: deliveryType,
           delivery_price: deliveryPrice,
+          affiliate_id: user?.id,
+          affiliate_name: user ? `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() || null : null,
+          status: "pending",
         });
       }
       setOrderSuccess(true);
@@ -231,11 +234,17 @@ export function CartDrawer() {
                         className="flex gap-3 p-3 rounded-xl border border-border/50 bg-card"
                       >
                         <div className="h-20 w-20 rounded-lg overflow-hidden flex-shrink-0 border border-border/50">
-                          <img
-                            src={item.product.image}
-                            alt={item.product.name}
-                            className="h-full w-full object-cover"
-                          />
+                          {getProductImage(item.product) ? (
+                            <img
+                              src={getProductImage(item.product)!}
+                              alt={item.product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-muted">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 flex flex-col justify-between min-w-0">
                           <h3 className="font-semibold text-sm line-clamp-2 leading-tight">

@@ -16,7 +16,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as ProductProductIdRouteImport } from './routes/product.$productId'
-import { Route as DashboardWithdrawalsRouteImport } from './routes/dashboard.withdrawals'
+import { Route as DashboardSupportRouteImport } from './routes/dashboard.support'
 import { Route as DashboardShippingRouteImport } from './routes/dashboard.shipping'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard.products'
@@ -59,9 +59,9 @@ const ProductProductIdRoute = ProductProductIdRouteImport.update({
   path: '/product/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardWithdrawalsRoute = DashboardWithdrawalsRouteImport.update({
-  id: '/withdrawals',
-  path: '/withdrawals',
+const DashboardSupportRoute = DashboardSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardShippingRoute = DashboardShippingRouteImport.update({
@@ -107,7 +107,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
-  '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
+  '/dashboard/support': typeof DashboardSupportRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -122,7 +122,7 @@ export interface FileRoutesByTo {
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
-  '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
+  '/dashboard/support': typeof DashboardSupportRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard': typeof DashboardIndexRoute
 }
@@ -139,7 +139,7 @@ export interface FileRoutesById {
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
-  '/dashboard/withdrawals': typeof DashboardWithdrawalsRoute
+  '/dashboard/support': typeof DashboardSupportRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -157,7 +157,7 @@ export interface FileRouteTypes {
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
-    | '/dashboard/withdrawals'
+    | '/dashboard/support'
     | '/product/$productId'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
@@ -172,7 +172,7 @@ export interface FileRouteTypes {
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
-    | '/dashboard/withdrawals'
+    | '/dashboard/support'
     | '/product/$productId'
     | '/dashboard'
   id:
@@ -188,7 +188,7 @@ export interface FileRouteTypes {
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
-    | '/dashboard/withdrawals'
+    | '/dashboard/support'
     | '/product/$productId'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
@@ -253,11 +253,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/withdrawals': {
-      id: '/dashboard/withdrawals'
-      path: '/withdrawals'
-      fullPath: '/dashboard/withdrawals'
-      preLoaderRoute: typeof DashboardWithdrawalsRouteImport
+    '/dashboard/support': {
+      id: '/dashboard/support'
+      path: '/support'
+      fullPath: '/dashboard/support'
+      preLoaderRoute: typeof DashboardSupportRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/shipping': {
@@ -312,7 +312,7 @@ interface DashboardRouteChildren {
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardShippingRoute: typeof DashboardShippingRoute
-  DashboardWithdrawalsRoute: typeof DashboardWithdrawalsRoute
+  DashboardSupportRoute: typeof DashboardSupportRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
@@ -323,7 +323,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardShippingRoute: DashboardShippingRoute,
-  DashboardWithdrawalsRoute: DashboardWithdrawalsRoute,
+  DashboardSupportRoute: DashboardSupportRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

@@ -36,13 +36,20 @@ export const Route = createFileRoute("/dashboard/orders")({ component: OrdersPag
 
 function OrdersPage() {
   const { user } = useAuth();
-  const { data: orders = [], isLoading } = useOrders(user?.id);
+  const { data: orders = [], isLoading, error } = useOrders(user?.id);
   const deleteOrder = useDeleteOrder();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const perPage = 8;
   const [editingOrder, setEditingOrder] = useState<any>(null);
+
+  // Debug log (remove after fix)
+  useEffect(() => {
+    console.log("[Orders Debug] user?.id =", user?.id);
+    console.log("[Orders Debug] orders count =", orders.length);
+    console.log("[Orders Debug] error =", error);
+  }, [user?.id, orders, error]);
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {

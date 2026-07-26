@@ -40,7 +40,9 @@ export interface Product {
 
 export interface Order {
   id: string;
+  id_commande_review: string | null;
   affiliate_id: string | null;
+  affiliate_name: string | null;
   product_id: string | null;
   product_name: string;
   quantity: number;
@@ -50,6 +52,7 @@ export interface Order {
   phone: string;
   wilaya: string;
   commune: string | null;
+  address?: string;
   delivery_type: DeliveryType | null;
   delivery_price: number;
   status: OrderStatus;
@@ -63,6 +66,8 @@ export interface Affiliate {
   phone: string | null;
   wilaya: string | null;
   commune: string | null;
+  payout_method: string | null;
+  account_number: string | null;
   status: "active" | "pending" | "suspended";
   available_balance: number;
   pending_balance: number;
@@ -74,7 +79,7 @@ export interface Withdrawal {
   id: string;
   affiliate_id: string | null;
   amount: number;
-  method: "CCP" | "BaridiMob" | "Bank transfer";
+  method: "CCP" | "BaridiMob" | "Bank transfer" | "Flixy";
   account_number: string | null;
   status: "pending" | "approved" | "rejected";
   requested_at: string;
@@ -108,4 +113,19 @@ export interface EarningsChart {
   year: number;
   earnings: number;
   orders: number;
+}
+
+export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+
+export interface SupportTicket {
+  id: string;
+  affiliate_id: string | null;
+  affiliate_name: string | null;
+  affiliate_email: string | null;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  admin_reply: string | null;
+  created_at: string;
+  updated_at: string;
 }

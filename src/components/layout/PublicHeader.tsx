@@ -36,19 +36,7 @@ export function PublicHeader() {
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
 
-          {!user && (
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ShoppingBag className="h-6 w-6" />
-              {totalItems > 0 && (
-                <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-brand text-[10px] font-bold text-white flex items-center justify-center border-2 border-background">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-          )}
+
 
           {user ? (
             <Button

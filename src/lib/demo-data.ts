@@ -18,6 +18,7 @@ export interface Product {
 
 export interface Order {
   id: string;
+  id_commande_review: string | null;
   productId: string;
   productName: string;
   quantity: number;
@@ -194,6 +195,7 @@ export const ORDERS: Order[] = Array.from({ length: 24 }).map((_, i) => {
   const date = new Date(Date.now() - i * 86400000 * 0.7);
   return {
     id: `DR-${(10245 - i).toString()}`,
+    id_commande_review: null,
     productId: p.id,
     productName: p.name,
     quantity: qty,

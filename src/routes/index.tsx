@@ -37,14 +37,64 @@ import {
   usePlatformStats,
   formatDZD,
   useCategories,
+  getProductImage,
 } from "@/lib/queries";
 import { FAQS } from "@/lib/demo-data";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth";
 
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+
+function ProductImage({ src, alt }: { src: string | null; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+
+  if (!src) {
+    return (
+      <div className="h-full w-full items-center justify-center bg-muted flex text-muted-foreground/30">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!loaded && (
+        <div className="h-full w-full absolute inset-0 items-center justify-center bg-muted flex text-muted-foreground/30 z-0">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={`product-card-image transition-opacity duration-500 z-10 relative ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onError={(e) => {
+          setLoaded(true);
+          const el = e.currentTarget;
+          el.style.display = "none";
+          const next = el.nextElementSibling;
+          if (next && next instanceof HTMLElement) next.style.display = "flex";
+        }}
+      />
+      <div
+        style={{ display: "none" }}
+        className="h-full w-full absolute inset-0 items-center justify-center bg-muted text-muted-foreground/30 z-20"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+    </>
+  );
+}
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -67,60 +117,117 @@ function Landing() {
 
 function Hero() {
   const { t } = useI18n();
-  const [, setVantaEffect] = useState<any>(null);
-  const myRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    let effect: any;
-    const initVanta = async () => {
-      if (!effect && myRef.current) {
-        try {
-          const THREE = await import("three");
-          (window as any).THREE = THREE;
-          // @ts-ignore
-          const vantaModule = await import("vanta/dist/vanta.globe.min");
-          let GLOBE = vantaModule.default;
-          if (typeof GLOBE === "object" && GLOBE !== null && typeof GLOBE.default === "function")
-            GLOBE = GLOBE.default;
-          if (typeof GLOBE !== "function") GLOBE = (window as any).VANTA?.GLOBE;
-          if (typeof GLOBE === "function") {
-            effect = GLOBE({
-              el: myRef.current,
-              THREE,
-              mouseControls: true,
-              touchControls: true,
-              gyroControls: false,
-              minHeight: 200,
-              minWidth: 200,
-              scale: 1,
-              scaleMobile: 1,
-              color: 0xa855f7,
-              color2: 0x10b981,
-              backgroundColor: 0x020817,
-            });
-            setVantaEffect(effect);
-          }
-        } catch (e) {
-          console.error("Vanta failed:", e);
-        }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let animId: number;
+    let renderer: any, scene: any, camera: any, globe: any, points: any;
+
+    (async () => {
+      const THREE = await import("three");
+
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width > 0 ? rect.width : window.innerWidth;
+      const h = rect.height > 0 ? rect.height : window.innerHeight;
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(w, h, false); // false = don't set CSS size (we handle it)
+      renderer.setClearColor(0x020817, 1);
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+      // Offset camera to right so globe appears on the right side
+      camera.position.set(1.5, 0, 3.5);
+
+      // Wireframe sphere (globe lines)
+      const sphereGeo = new THREE.SphereGeometry(1, 28, 28);
+      const wireGeo = new THREE.EdgesGeometry(sphereGeo);
+      const wireMat = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.35 });
+      globe = new THREE.LineSegments(wireGeo, wireMat);
+      scene.add(globe);
+
+      // Particle dots on surface
+      const ptCount = 500;
+      const ptGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(ptCount * 3);
+      for (let i = 0; i < ptCount; i++) {
+        const phi = Math.acos(-1 + (2 * i) / ptCount);
+        const theta = Math.sqrt(ptCount * Math.PI) * phi;
+        positions[i * 3] = Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = Math.cos(phi);
       }
-    };
-    initVanta();
+      ptGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      const ptMat = new THREE.PointsMaterial({ color: 0xa855f7, size: 0.018, transparent: true, opacity: 0.7 });
+      points = new THREE.Points(ptGeo, ptMat);
+      scene.add(points);
+
+      // Ambient light
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+      const dirLight = new THREE.DirectionalLight(0xa855f7, 1);
+      dirLight.position.set(5, 5, 5);
+      scene.add(dirLight);
+
+      // Mouse parallax
+      let mouseX = 0, mouseY = 0;
+      const onMouse = (e: MouseEvent) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 0.6;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 0.6;
+      };
+      window.addEventListener("mousemove", onMouse);
+
+      // Resize
+      const onResize = () => {
+        if (!canvas) return;
+        const w2 = canvas.offsetWidth;
+        const h2 = canvas.offsetHeight;
+        camera.aspect = w2 / h2;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w2, h2);
+      };
+      window.addEventListener("resize", onResize);
+
+      const animate = () => {
+        animId = requestAnimationFrame(animate);
+        globe.rotation.y += 0.003;
+        globe.rotation.x += 0.0005;
+        points.rotation.y += 0.003;
+        points.rotation.x += 0.0005;
+        camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
+        camera.position.y += (-mouseY * 0.5 - camera.position.y) * 0.05;
+        camera.lookAt(scene.position);
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // cleanup stored in outer scope so return() can access
+      (canvas as any)._cleanup = () => {
+        window.removeEventListener("mousemove", onMouse);
+        window.removeEventListener("resize", onResize);
+        cancelAnimationFrame(animId);
+        renderer.dispose();
+      };
+    })();
+
     return () => {
-      if (effect) effect.destroy();
+      if ((canvas as any)._cleanup) (canvas as any)._cleanup();
     };
   }, []);
 
   return (
-    <section className="relative overflow-hidden gradient-hero min-h-screen flex items-center justify-center">
+    <section className="relative overflow-hidden min-h-screen flex items-center justify-center" style={{ backgroundColor: "oklch(0.11 0.04 265)", backgroundImage: "radial-gradient(ellipse at 30% 20%, oklch(0.60 0.18 300 / 0.25), transparent 55%), radial-gradient(ellipse at 70% 60%, oklch(0.72 0.19 155 / 0.18), transparent 55%), linear-gradient(180deg, oklch(0.11 0.04 265), oklch(0.14 0.03 265))" }}>
       <div className="absolute inset-0 -z-10 opacity-40 bg-background/20 pointer-events-none">
         <div className="absolute top-20 left-1/4 h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
         <div className="absolute top-40 right-1/4 h-96 w-96 rounded-full bg-success/20 blur-3xl" />
       </div>
-      <div
-        ref={myRef}
-        className="absolute inset-y-0 right-0 z-0 pointer-events-auto"
-        style={{ left: "-300px", width: "calc(100% + 300px)" }}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{ width: "100%", height: "100%" }}
       />
       <div className="mx-auto max-w-7xl px-6 py-16 md:py-24 relative z-10 w-full grid lg:grid-cols-2 gap-12 items-center -translate-y-[100px]">
         <div className="max-w-2xl text-left">
@@ -329,6 +436,7 @@ function CategoriesCarousel() {
 function ProductsPreview() {
   const { t } = useI18n();
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const { data: products = [], isLoading } = useProducts();
   return (
     <section id="products" className="py-24 bg-gradient-to-b from-background to-accent/40">
@@ -368,7 +476,7 @@ function ProductsPreview() {
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <div className="product-card-image-wrapper">
-                    <img src={p.image} alt={p.name} loading="lazy" className="product-card-image" />
+                    <ProductImage src={getProductImage(p)} alt={p.name} />
                   </div>
                   <div className="product-card-content">
                     <h3 className="product-card-title" dir="auto">
@@ -388,12 +496,16 @@ function ProductsPreview() {
                     </div>
                   </div>
                 </Link>
-                {p.is_active ? (
+                {!user ? (
+                  <Button asChild className="w-full rounded-none h-12 bg-muted text-muted-foreground hover:bg-muted hover:text-muted-foreground shadow-none border-t border-border">
+                    <Link to="/login">{t("nav_sign_in")}</Link>
+                  </Button>
+                ) : p.is_active ? (
                   <button
                     className="product-card-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      addToCart({ id: p.id, name: p.name, image: p.image, price: p.price });
+                      addToCart({ id: p.id, name: p.name, image: getProductImage(p) ?? p.image, price: p.price });
                     }}
                   >
                     <ShoppingBag className="h-4 w-4 mr-1.5 inline-block" />

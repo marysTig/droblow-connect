@@ -174,7 +174,7 @@ function RegisterPage() {
               </SelectTrigger>
               <SelectContent>
                 {communes.map((c) => (
-                  <SelectItem key={c.id} value={c.nameFr}>
+                  <SelectItem key={c.nameFr} value={c.nameFr}>
                     {c.nameFr}
                   </SelectItem>
                 ))}

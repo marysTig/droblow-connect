@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useAffiliateProfile } from "@/lib/queries";
+import { useAffiliateProfile, useUpdateAffiliateProfile } from "@/lib/queries";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import wilayasData from "../../wilayas-with-municipalities.json";
@@ -43,6 +43,10 @@ function ProfileForm({ profile }: { profile: any }) {
 
   const [selectedWilaya, setSelectedWilaya] = useState(profile?.wilaya || "");
   const [selectedCommune, setSelectedCommune] = useState(profile?.commune || "");
+  const [payoutMethod, setPayoutMethod] = useState(profile?.payout_method || "ccp");
+  const [accountNumber, setAccountNumber] = useState(profile?.account_number || "");
+
+  const updateProfile = useUpdateAffiliateProfile();
 
   const wilayaData = wilayasData.find((w) => w.nameFr === selectedWilaya);
   const communes = wilayaData?.communes || [];
@@ -132,7 +136,7 @@ function ProfileForm({ profile }: { profile: any }) {
                   </SelectTrigger>
                   <SelectContent>
                     {communes.map((c) => (
-                      <SelectItem key={c.id} value={c.nameFr}>
+                      <SelectItem key={c.nameFr} value={c.nameFr}>
                         {c.nameFr}
                       </SelectItem>
                     ))}
@@ -147,12 +151,37 @@ function ProfileForm({ profile }: { profile: any }) {
         <TabsContent value="payment" className="mt-4">
           <Card>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <F label="Payout method" defaultValue="CCP" />
-              <F label="Account holder" defaultValue={profile?.name || ""} />
-              <F label="Account number" defaultValue="" placeholder="e.g. 00799999 0016 66" />
-              <F label="RIB / IBAN" defaultValue="" placeholder="e.g. 123 456 789 012 345 678" />
+              <div>
+                <Label>Payout method</Label>
+                <Select value={payoutMethod} onValueChange={setPayoutMethod}>
+                  <SelectTrigger className="mt-1.5 h-11 bg-background">
+                    <SelectValue placeholder="Select payout method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CCP">CCP</SelectItem>
+                    <SelectItem value="BaridiMob">BaridiMob</SelectItem>
+                    <SelectItem value="Bank transfer">Bank transfer</SelectItem>
+                    <SelectItem value="Flixy">Flixy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <F label="Account holder" value={profile?.name || ""} disabled />
+              <F 
+                label="Account number" 
+                value={accountNumber} 
+                onChange={(e) => setAccountNumber(e.target.value)} 
+                placeholder={payoutMethod === "Flixy" ? "Phone number for Flixy" : "e.g. 00799999 0016 66"} 
+              />
             </div>
-            <Save />
+            <Save 
+              onClick={() => {
+                updateProfile.mutate(
+                  { id: profile.id, payout_method: payoutMethod, account_number: accountNumber },
+                  { onSuccess: () => toast.success("Payment details updated") }
+                );
+              }}
+              isLoading={updateProfile.isPending}
+            />
           </Card>
         </TabsContent>
 
@@ -205,13 +234,15 @@ function F({ label, ...rest }: { label: string } & React.InputHTMLAttributes<HTM
     </div>
   );
 }
-function Save({ label = "Save changes" }: { label?: string }) {
+function Save({ label = "Save changes", onClick, isLoading }: { label?: string; onClick?: () => void; isLoading?: boolean }) {
   return (
     <div className="flex justify-end pt-2">
       <Button
         className="gradient-brand text-brand-foreground shadow-brand"
-        onClick={() => toast.success("Saved")}
+        onClick={onClick ? onClick : () => toast.success("Saved")}
+        disabled={isLoading}
       >
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {label}
       </Button>
     </div>
