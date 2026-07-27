@@ -3,7 +3,8 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
-import { PageHeader, StatCard, StatusBadge } from "@/components/dashboard/shared";
+import { PageHeader, StatCard, StatusBadge, ProductNameDisplay } from "@/components/dashboard/shared";
+import { formatProductName } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -68,6 +69,7 @@ import {
   CheckCircle2,
   XCircle,
   SendHorizontal,
+  Info,
 } from "lucide-react";
 import {
   Select,
@@ -229,6 +231,7 @@ function ProductDialog({
       subcategory: form.subcategory || null,
       price: Number(form.price),
       image: coverUrl,
+      images: galleryUrls,
       is_active: form.is_active,
     };
 
@@ -898,9 +901,16 @@ function AdminPanel() {
   const [deleteOrderDialog, setDeleteOrderDialog] = useState<{ open: boolean; id?: string; label?: string }>({
     open: false,
   });
+  const [cancellationDialog, setCancellationDialog] = useState<{ open: boolean; orderId?: string; currentReason?: string | null }>({
+    open: false,
+  });
+  const [cancellationReason, setCancellationReason] = useState("");
   const [ticketDialog, setTicketDialog] = useState<{ open: boolean; ticket?: SupportTicket | null }>({
     open: false,
   });
+    const [affiliateInfoDialog, setAffiliateInfoDialog] = useState<{ open: boolean; affiliateId?: string | null }>({
+      open: false,
+    });
   const [ticketReply, setTicketReply] = useState("");
   const [ticketStatusEdit, setTicketStatusEdit] = useState<TicketStatus>("open");
 
@@ -1149,7 +1159,7 @@ function AdminPanel() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr style={{ borderBottom: "1px solid hsl(220 15% 18%)" }}>
-                        {["Order ID", "Customer", "Product", "Total", "Status"].map((h) => (
+                        {["Order ID", "Customer", "Affiliate", "Product", "Total", "Status"].map((h) => (
                           <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                         ))}
                       </tr>
@@ -1159,13 +1169,14 @@ function AdminPanel() {
                         <tr key={o.id} className="hover:bg-white/2 transition-colors" style={{ borderBottom: "1px solid hsl(220 15% 14%)" }}>
                           <td className="px-5 py-3 font-mono text-xs text-slate-400">{o.id.slice(0, 16)}…</td>
                           <td className="px-5 py-3 text-slate-200 font-medium">{o.customer_name}</td>
-                          <td className="px-5 py-3 text-slate-400 max-w-[160px] truncate">{o.product_name}</td>
+                          <td className="px-5 py-3 text-slate-200">{o.affiliate_name || "N/A"}</td>
+                          <td className="px-5 py-3 text-slate-400 max-w-[160px] truncate"><ProductNameDisplay name={o.product_name} /></td>
                           <td className="px-5 py-3 text-white font-semibold">{formatDZD(o.selling_price * o.quantity)}</td>
                           <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
                         </tr>
                       ))}
                       {orders.length === 0 && (
-                        <tr><td colSpan={5} className="px-5 py-10 text-center text-slate-500">No orders yet.</td></tr>
+                        <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-500">No orders yet.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1274,14 +1285,14 @@ function AdminPanel() {
                   <Table>
                     <TableHeader>
                       <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
-                        {["Order", "ID Review", "Product", "Customer", "Qty", "Base", "Total", "Commission", "Delivery", "Status", "Action", ""].map((h) => (
+                        {["Order", "ID Review", "Product", "Customer", "Affiliate", "Qty", "Base", "Total", "Commission", "Delivery", "Status", "Action", ""].map((h) => (
                           <TableHead key={h} className="text-slate-500">{h}</TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {orders.length === 0 && (
-                        <TableRow><TableCell colSpan={10} className="text-center text-slate-500 py-8">No orders found.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={13} className="text-center text-slate-500 py-8">No orders found.</TableCell></TableRow>
                       )}
                       {orders.slice(0, visibleOrders).map((o) => (
                         <TableRow key={o.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
@@ -1300,8 +1311,9 @@ function AdminPanel() {
                               }}
                             />
                           </TableCell>
-                          <TableCell className="text-slate-200">{o.product_name}</TableCell>
+                          <TableCell className="text-slate-200"><ProductNameDisplay name={o.product_name} /></TableCell>
                           <TableCell className="text-slate-200">{o.customer_name}</TableCell>
+                          <TableCell className="text-slate-200">{o.affiliate_name || "N/A"}</TableCell>
                           <TableCell className="text-slate-300">{o.quantity}</TableCell>
                           <TableCell className="text-slate-400">{formatDZD(o.selling_price * o.quantity - (o.commission || 0))}</TableCell>
                           <TableCell className="font-semibold text-white">{formatDZD(o.selling_price * o.quantity)}</TableCell>
@@ -1309,7 +1321,17 @@ function AdminPanel() {
                           <TableCell><Badge variant="outline" className="capitalize border-white/10 text-slate-400">{o.delivery_type || "N/A"}</Badge></TableCell>
                           <TableCell><StatusBadge status={o.status} /></TableCell>
                           <TableCell>
-                            <Select defaultValue={o.status} onValueChange={(v) => updateOrderStatus.mutate({ id: o.id, status: v as OrderStatus })}>
+                            <Select
+                              defaultValue={o.status}
+                              onValueChange={(v) => {
+                                if (v === "cancelled") {
+                                  setCancellationReason(o.cancellation_reason || "");
+                                  setCancellationDialog({ open: true, orderId: o.id, currentReason: o.cancellation_reason });
+                                } else {
+                                  updateOrderStatus.mutate({ id: o.id, status: v as OrderStatus });
+                                }
+                              }}
+                            >
                               <SelectTrigger className="h-8 w-[130px] bg-white/5 border-white/10 text-slate-300" disabled={updateOrderStatus.isPending}>
                                 <SelectValue />
                               </SelectTrigger>
@@ -1325,7 +1347,7 @@ function AdminPanel() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
-                              onClick={() => setDeleteOrderDialog({ open: true, id: o.id, label: `${o.customer_name} – ${o.product_name}` })}
+                              onClick={() => setDeleteOrderDialog({ open: true, id: o.id, label: `${o.customer_name} – ${formatProductName(o.product_name)}` })}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1406,20 +1428,31 @@ function AdminPanel() {
                 <Table>
                   <TableHeader>
                     <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
-                      {["Request ID", "Amount", "Method", "Requested", "Status", "Action"].map((h) => (
+                      {["Request ID", "Affiliate", "Amount", "Method", "Account Number", "Requested", "Status", "Action"].map((h) => (
                         <TableHead key={h} className={`text-slate-500 ${h === "Action" ? "text-right" : ""}`}>{h}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {withdrawals.length === 0 && (
-                      <TableRow><TableCell colSpan={6} className="text-center text-slate-500 py-8">No withdrawals found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-slate-500 py-8">No withdrawals found.</TableCell></TableRow>
                     )}
                     {withdrawals.map((w) => (
                       <TableRow key={w.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
-                        <TableCell className="font-mono text-xs text-slate-400">{w.id}</TableCell>
+                        <TableCell className="font-mono text-xs text-slate-400">{w.id.slice(0, 8)}…</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const aff = affiliates.find((a) => a.id === w.affiliate_id);
+                            return aff ? (
+                              <span className="text-sm font-medium text-slate-200">{aff.name}</span>
+                            ) : (
+                              <span className="font-mono text-xs text-slate-500">{w.affiliate_id ? w.affiliate_id.slice(0, 8) + "…" : "—"}</span>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell className="font-semibold text-white">{formatDZD(w.amount)}</TableCell>
                         <TableCell className="text-slate-300">{w.method}</TableCell>
+                        <TableCell className="font-mono text-xs text-slate-300">{w.account_number || "N/A"}</TableCell>
                         <TableCell className="text-xs text-slate-500">{new Date(w.requested_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={`capitalize ${w.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : w.status === "rejected" ? "bg-rose-500/10 text-rose-400 border-rose-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
@@ -1427,6 +1460,9 @@ function AdminPanel() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
+                          <Button size="sm" variant="ghost" className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 mr-1" onClick={() => setAffiliateInfoDialog({ open: true, affiliateId: w.affiliate_id })}>
+                            <Info className="h-4 w-4" />
+                          </Button>
                           <Button size="sm" variant="ghost" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10" disabled={w.status !== "pending"} onClick={() => updateWithdrawal.mutate({ id: w.id, status: "approved" })}>
                             <Check className="h-4 w-4" />
                           </Button>
@@ -1799,16 +1835,75 @@ function AdminPanel() {
                 </p>
               </div>
 
-              {/* Description */}
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Description du problème</Label>
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm whitespace-pre-wrap leading-relaxed">
-                  {ticketDialog.ticket.description}
+              {/* Messages History */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {/* Description initiale */}
+                <div className="rounded-xl bg-muted/40 border border-border/50 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-[10px] font-bold">A</span>
+                    </div>
+                    <span className="text-xs font-semibold">Affilié</span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {ticketDialog.ticket.description}
+                  </p>
                 </div>
+
+                {/* Ancienne réponse admin */}
+                {ticketDialog.ticket.admin_reply && (
+                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 ml-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-primary">S</span>
+                      </div>
+                      <span className="text-xs font-semibold text-primary">Support Admin</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {ticketDialog.ticket.admin_reply}
+                    </p>
+                  </div>
+                )}
+
+                {/* Nouveaux messages */}
+                {ticketDialog.ticket.messages?.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-xl border p-3 ${
+                      msg.role === "admin"
+                        ? "bg-primary/5 border-primary/20 ml-6"
+                        : "bg-muted/40 border-border/50 mr-6"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                          msg.role === "admin" ? "bg-primary/20" : "bg-muted"
+                        }`}
+                      >
+                        <span
+                          className={`text-[10px] font-bold ${
+                            msg.role === "admin" ? "text-primary" : ""
+                          }`}
+                        >
+                          {msg.role === "admin" ? "S" : "A"}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-xs font-semibold ${
+                          msg.role === "admin" ? "text-primary" : ""
+                        }`}
+                      >
+                        {msg.role === "admin" ? "Support Admin" : "Affilié"}
+                      </span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  </div>
+                ))}
               </div>
 
               {/* Status */}
-              <div className="space-y-2">
+              <div className="space-y-2 pt-2">
                 <Label htmlFor="ticket-status-admin">Statut</Label>
                 <select
                   id="ticket-status-admin"
@@ -1825,13 +1920,13 @@ function AdminPanel() {
 
               {/* Admin reply */}
               <div className="space-y-2">
-                <Label htmlFor="ticket-reply-admin">Réponse admin</Label>
+                <Label htmlFor="ticket-reply-admin">Nouvelle réponse</Label>
                 <Textarea
                   id="ticket-reply-admin"
                   value={ticketReply}
                   onChange={(e) => setTicketReply(e.target.value)}
-                  placeholder="Rédigez votre réponse à l'affilié…"
-                  className="min-h-[120px] resize-none"
+                  placeholder="Rédigez une nouvelle réponse…"
+                  className="min-h-[100px] resize-none"
                 />
               </div>
             </div>
@@ -1849,11 +1944,24 @@ function AdminPanel() {
               disabled={updateTicket.isPending}
               onClick={() => {
                 if (!ticketDialog.ticket) return;
+                
+                let updatedMessages = ticketDialog.ticket.messages || [];
+                if (ticketReply.trim()) {
+                  updatedMessages = [
+                    ...updatedMessages,
+                    {
+                      role: "admin",
+                      content: ticketReply.trim(),
+                      created_at: new Date().toISOString(),
+                    },
+                  ];
+                }
+
                 updateTicket.mutate(
                   {
                     id: ticketDialog.ticket.id,
                     status: ticketStatusEdit,
-                    admin_reply: ticketReply || undefined,
+                    messages: updatedMessages,
                   },
                   {
                     onSuccess: () => {
@@ -1876,6 +1984,121 @@ function AdminPanel() {
                   Enregistrer la réponse
                 </span>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={affiliateInfoDialog.open} onOpenChange={(open) => setAffiliateInfoDialog({ open, affiliateId: null })}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-white">Affiliate Information</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {(() => {
+              const aff = affiliates.find(a => a.id === affiliateInfoDialog.affiliateId);
+              if (!aff) return <div className="text-slate-400 text-center">Affiliate not found</div>;
+              return (
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</span>
+                    <span className="text-sm text-slate-200">{aff.first_name} {aff.last_name}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</span>
+                    <span className="text-sm text-slate-200">{aff.email}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</span>
+                    <span className="text-sm text-slate-200">{aff.phone || "N/A"}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Wilaya / Commune</span>
+                    <span className="text-sm text-slate-200">{aff.wilaya || "N/A"} {aff.commune ? `- ${aff.commune}` : ""}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined At</span>
+                    <span className="text-sm text-slate-200">{new Date(aff.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Payout Method</span>
+                    <span className="text-sm text-emerald-400 font-medium">{aff.payout_method || "N/A"}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Number</span>
+                    <span className="text-sm font-mono text-slate-300">{aff.account_number || "N/A"}</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAffiliateInfoDialog({ open: false })} className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── CANCELLATION REASON DIALOG ── */}
+      <Dialog
+        open={cancellationDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setCancellationDialog({ open: false });
+        }}
+      >
+        <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-white flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-rose-400" />
+              Annuler la commande
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-slate-400">
+              Veuillez indiquer le motif d'annulation. Ce message sera affiché à l'affilié.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-slate-300 text-sm">Motif d'annulation <span className="text-rose-400">*</span></Label>
+              <Textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Ex : Adresse incorrecte, client injoignable, produit en rupture de stock…"
+                className="min-h-[100px] bg-white/5 border-white/10 text-slate-200 placeholder:text-slate-600 resize-none focus-visible:ring-rose-500/30"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              className="text-slate-400 hover:text-white hover:bg-white/5"
+              onClick={() => setCancellationDialog({ open: false })}
+            >
+              Retour
+            </Button>
+            <Button
+              className="bg-rose-600 hover:bg-rose-500 text-white border-0"
+              disabled={!cancellationReason.trim() || updateOrderStatus.isPending}
+              onClick={() => {
+                if (!cancellationDialog.orderId || !cancellationReason.trim()) return;
+                updateOrderStatus.mutate(
+                  {
+                    id: cancellationDialog.orderId,
+                    status: "cancelled",
+                    cancellation_reason: cancellationReason.trim(),
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success("Commande annulée avec motif enregistré.");
+                      setCancellationDialog({ open: false });
+                      setCancellationReason("");
+                    },
+                    onError: (err: any) => toast.error("Erreur : " + err.message),
+                  }
+                );
+              }}
+            >
+              {updateOrderStatus.isPending ? "Annulation…" : "Confirmer l'annulation"}
             </Button>
           </DialogFooter>
         </DialogContent>

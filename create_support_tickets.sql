@@ -35,14 +35,23 @@ CREATE POLICY "affiliates_insert_own_tickets"
   ON support_tickets FOR INSERT
   WITH CHECK (affiliate_id = auth.uid());
 
--- Admin : accès complet (basé sur le champ is_admin dans les métadonnées ou email admin)
--- Ajustez la condition selon votre logique admin (ici on autorise tous les utilisateurs authentifiés à lire pour l'admin)
+-- Create a secure function to check admin role (bypasses affiliates RLS)
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM affiliates
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+-- Admin : accès complet
 CREATE POLICY "admin_all_tickets"
   ON support_tickets FOR ALL
-  USING (
-    (auth.jwt() -> 'user_metadata' ->> 'is_admin') = 'true'
-    OR affiliate_id = auth.uid()
-  );
+  USING (is_admin())
+  WITH CHECK (is_admin());
 
 -- Auto-update updated_at on change
 CREATE OR REPLACE FUNCTION update_updated_at_column()

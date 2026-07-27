@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
-import { PageHeader, StatCard } from "@/components/dashboard/shared";
+import { PageHeader, StatCard, ProductNameDisplay } from "@/components/dashboard/shared";
 import { Wallet, Clock, CheckCircle2, ArrowDownToLine } from "lucide-react";
 import { formatDZD, useOrders, useWithdrawals, useCreateWithdrawal, useAffiliateProfile } from "@/lib/queries";
 import {
@@ -51,7 +51,6 @@ function EarningsPage() {
   const { data: profile } = useAffiliateProfile(user?.id);
 
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
   // Don't need local state for method and account number since they come from profile
   // But wait, the form should use profile.payout_method and profile.account_number.
 
@@ -60,7 +59,12 @@ function EarningsPage() {
     (o) => o.status === "pending" || o.status === "confirmed" || o.status === "shipped",
   );
 
-  const availableBalance = delivered.reduce((sum, o) => sum + o.commission, 0);
+  const totalCommission = delivered.reduce((sum, o) => sum + o.commission, 0);
+  const totalWithdrawn = withdrawals
+    .filter((w) => w.status !== "rejected")
+    .reduce((sum, w) => sum + w.amount, 0);
+  const availableBalance = totalCommission - totalWithdrawn;
+  
   const pendingCommission = pending.reduce((sum, o) => sum + o.commission, 0);
   const paid = withdrawals
     .filter((w) => w.status === "approved")
@@ -71,9 +75,8 @@ function EarningsPage() {
     .slice(0, 20);
 
   const handleSubmit = () => {
-    const reqAmount = Number(amount);
+    const reqAmount = availableBalance;
     if (!reqAmount || reqAmount <= 0) return toast.error("Invalid amount");
-    if (reqAmount > availableBalance) return toast.error("Insufficient balance");
     if (!profile?.payout_method || !profile?.account_number) {
       return toast.error("Please set your payout method and account number in your profile first");
     }
@@ -121,9 +124,9 @@ function EarningsPage() {
                   <Label>Amount (DZD)</Label>
                   <Input
                     type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="mt-1.5 h-11"
+                    value={availableBalance}
+                    disabled
+                    className="mt-1.5 h-11 bg-muted/50 text-muted-foreground"
                   />
                 </div>
                 <div>
@@ -238,7 +241,7 @@ function EarningsPage() {
                           {new Date(o.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{o.id}</TableCell>
-                        <TableCell className="font-medium">{o.product_name}</TableCell>
+                        <TableCell className="font-medium"><ProductNameDisplay name={o.product_name} /></TableCell>
                         <TableCell className="font-semibold text-success">
                           + {formatDZD(o.commission)}
                         </TableCell>

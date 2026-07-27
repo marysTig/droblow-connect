@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { PageHeader, StatusBadge } from "@/components/dashboard/shared";
+import { PageHeader, StatusBadge, ProductNameDisplay } from "@/components/dashboard/shared";
+import { formatProductName } from "@/lib/utils";
 import { formatDZD, useOrders, useUpdateOrder, useDeleteOrder } from "@/lib/queries";
 import type { OrderStatus } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Download, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -57,7 +58,7 @@ function OrdersPage() {
         !q ||
         o.id.toLowerCase().includes(q.toLowerCase()) ||
         o.customer_name.toLowerCase().includes(q.toLowerCase()) ||
-        o.product_name.toLowerCase().includes(q.toLowerCase());
+        formatProductName(o.product_name).toLowerCase().includes(q.toLowerCase());
       const matchesS = status === "all" || o.status === status;
       return matchesQ && matchesS;
     });
@@ -158,7 +159,7 @@ function OrdersPage() {
                 paged.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="font-mono text-xs">{o.id}</TableCell>
-                    <TableCell className="font-medium">{o.product_name}</TableCell>
+                    <TableCell className="font-medium"><ProductNameDisplay name={o.product_name} /></TableCell>
                     <TableCell>
                       <div className="text-sm">{o.customer_name}</div>
                       <div className="text-xs text-muted-foreground">{o.phone}</div>
@@ -175,7 +176,17 @@ function OrdersPage() {
                       <div className="capitalize text-sm">{o.delivery_type || "N/A"}</div>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={o.status} />
+                      <div className="space-y-1">
+                        <StatusBadge status={o.status} />
+                        {o.status === "cancelled" && o.cancellation_reason && (
+                          <div className="flex items-start gap-1.5 mt-1.5 rounded-lg bg-destructive/10 border border-destructive/20 px-2 py-1.5 max-w-[220px]">
+                            <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                            <p className="text-xs text-destructive leading-snug">
+                              {o.cancellation_reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}

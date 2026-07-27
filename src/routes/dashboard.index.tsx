@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
-import { PageHeader, StatCard, StatusBadge } from "@/components/dashboard/shared";
-import { Wallet, Clock, TrendingUp, Package, ArrowRight } from "lucide-react";
+import { PageHeader, StatCard, StatusBadge, ProductNameDisplay } from "@/components/dashboard/shared";
+import { Wallet, Clock, TrendingUp, Package, ArrowRight, AlertCircle } from "lucide-react";
 import { useOrders, useEarningsChart, formatDZD } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -179,14 +179,24 @@ function DashboardHome() {
                 recent.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="font-mono text-xs">{o.id}</TableCell>
-                    <TableCell className="font-medium">{o.product_name}</TableCell>
+                    <TableCell className="font-medium"><ProductNameDisplay name={o.product_name} /></TableCell>
                     <TableCell className="text-muted-foreground">{o.customer_name}</TableCell>
                     <TableCell className="text-muted-foreground">{o.wilaya}</TableCell>
                     <TableCell className="font-semibold text-success">
                       {formatDZD(o.commission)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={o.status} />
+                      <div className="space-y-1">
+                        <StatusBadge status={o.status} />
+                        {o.status === "cancelled" && o.cancellation_reason && (
+                          <div className="flex items-start gap-1.5 mt-1.5 rounded-lg bg-destructive/10 border border-destructive/20 px-2 py-1.5 max-w-[200px]">
+                            <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                            <p className="text-xs text-destructive leading-snug">
+                              {o.cancellation_reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

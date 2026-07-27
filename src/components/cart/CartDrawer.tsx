@@ -96,21 +96,34 @@ export function CartDrawer() {
   // Subtotal using custom selling prices if affiliate is logged in
   const cartSubtotal = useMemo(() => {
     return items.reduce((sum, item) => {
-      const price = showAffiliateFeatures
-        ? (sellingPrices[item.product.id] ?? item.product.price)
-        : item.product.price;
-      return sum + price * item.quantity;
+      const baseTotal = item.product.price * item.quantity;
+      const totalSellingPrice = showAffiliateFeatures
+        ? (sellingPrices[item.product.id] ?? baseTotal)
+        : baseTotal;
+      return sum + totalSellingPrice;
     }, 0);
   }, [items, showAffiliateFeatures, sellingPrices]);
 
   const totalCommission = useMemo(() => {
     return items.reduce((sum, item) => {
       if (!showAffiliateFeatures) return sum;
-      const sellingPrice = sellingPrices[item.product.id] ?? item.product.price;
-      const commission = (sellingPrice - item.product.price) * item.quantity;
+      const baseTotal = item.product.price * item.quantity;
+      const totalSellingPrice = sellingPrices[item.product.id] ?? baseTotal;
+      const commission = totalSellingPrice - baseTotal;
       return sum + (commission > 0 ? commission : 0);
     }, 0);
   }, [items, showAffiliateFeatures, sellingPrices]);
+
+  // Règle : prix de vente (total) doit être STRICTEMENT supérieur au prix de base * quantité
+  const invalidItems = useMemo(() => {
+    if (!showAffiliateFeatures) return [];
+    return items.filter((item) => {
+      const baseTotal = item.product.price * item.quantity;
+      const totalSellingPrice = sellingPrices[item.product.id] ?? baseTotal;
+      return totalSellingPrice <= baseTotal;
+    });
+  }, [items, showAffiliateFeatures, sellingPrices]);
+  const hasInvalidPrices = invalidItems.length > 0;
 
   const deliveryPrice =
     deliveryType === "home" ? (shippingRate.home_delivery ?? 0) : (shippingRate.desk_delivery ?? 0);
@@ -128,36 +141,48 @@ export function CartDrawer() {
     }
     if (items.length === 0) return;
 
+    // Validation du prix de commission
+    if (showAffiliateFeatures && hasInvalidPrices) {
+      const names = invalidItems.map((i) => `${i.product.name} (min: ${formatDZD(i.product.price * i.quantity + 1)})`).join(", ");
+      toast.error(`Prix de vente invalide — doit être > au prix de base total : ${names}`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Create one order per cart item (or combine – here we use first item as primary)
-      for (const item of items) {
-        const sellingPrice = showAffiliateFeatures
-          ? (sellingPrices[item.product.id] ?? item.product.price)
-          : item.product.price;
-        const commission = showAffiliateFeatures
-          ? (sellingPrice - item.product.price) * item.quantity
-          : 0;
+      // Combine all cart items into a single order
+      const productsJson = items.map((item) => ({
+        id: item.product.id,
+        name: item.product.name,
+        qty: item.quantity,
+        price: item.product.price,
+        sellingPrice: showAffiliateFeatures
+          ? (sellingPrices[item.product.id] ?? (item.product.price * item.quantity))
+          : (item.product.price * item.quantity),
+      }));
 
-        await createOrder.mutateAsync({
-          id: generateId(),
-          product_id: item.product.id,
-          product_name: item.product.name,
-          quantity: item.quantity,
-          selling_price: sellingPrice,
-          commission: commission > 0 ? commission : 0,
-          customer_name: customerName,
-          phone,
-          wilaya,
-          commune,
-          address: deliveryType === "desk" ? (shippingRate as any).office_address || "" : address,
-          delivery_type: deliveryType,
-          delivery_price: deliveryPrice,
-          affiliate_id: user?.id,
-          affiliate_name: user ? `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() || null : null,
-          status: "pending",
-        });
-      }
+      const totalBase = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+      const totalSellingPrice = cartSubtotal; // Already calculated above
+      const commission = totalCommission; // Already calculated above
+
+      await createOrder.mutateAsync({
+        id: generateId(),
+        product_id: null,
+        product_name: JSON.stringify(productsJson),
+        quantity: 1, // Quantity 1 for the whole cart
+        selling_price: totalSellingPrice,
+        commission: commission > 0 ? commission : 0,
+        customer_name: customerName,
+        phone,
+        wilaya,
+        commune,
+        address: deliveryType === "desk" ? (shippingRate as any).office_address || "" : address,
+        delivery_type: deliveryType,
+        delivery_price: deliveryPrice,
+        affiliate_id: user?.id,
+        affiliate_name: user ? `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() || null : null,
+        status: "pending",
+      });
       setOrderSuccess(true);
       clearCart?.();
     } catch (err: any) {
@@ -225,9 +250,10 @@ export function CartDrawer() {
                 {/* Products */}
                 <div className="p-5 flex flex-col gap-4">
                   {items.map((item) => {
-                    const currentSellingPrice = showAffiliateFeatures
-                      ? (sellingPrices[item.product.id] ?? item.product.price)
-                      : item.product.price;
+                    const baseTotal = item.product.price * item.quantity;
+                    const currentTotalSellingPrice = showAffiliateFeatures
+                      ? (sellingPrices[item.product.id] ?? baseTotal)
+                      : baseTotal;
                     return (
                       <div
                         key={item.product.id}
@@ -259,41 +285,36 @@ export function CartDrawer() {
                               <div className="flex items-center gap-2">
                                 <Label
                                   className="text-xs font-semibold"
-                                  title="Prix de vente pour un seul article"
+                                  title="Prix de vente total pour cet article"
                                 >
-                                  Prix vente (unité):
+                                  Prix vente (Total):
                                 </Label>
                                 <Input
                                   type="number"
-                                  min={item.product.price}
-                                  className="h-7 w-24 text-xs font-bold text-brand"
-                                  value={sellingPrices[item.product.id] ?? item.product.price}
+                                  min={baseTotal + 1}
+                                  className={`h-7 w-24 text-xs font-bold ${
+                                    (sellingPrices[item.product.id] ?? baseTotal) <= baseTotal
+                                      ? "border-destructive text-destructive"
+                                      : "text-brand"
+                                  }`}
+                                  value={sellingPrices[item.product.id] ?? baseTotal}
                                   onChange={(e) =>
                                     handleSellingPriceChange(item.product.id, e.target.value)
                                   }
                                 />
                                 <span className="text-xs text-muted-foreground">DZD</span>
                               </div>
-                              {currentSellingPrice - item.product.price > 0 && (
+                              {/* Erreur : prix <= prix de base total */}
+                              {currentTotalSellingPrice <= baseTotal ? (
+                                <p className="text-xs text-destructive font-medium">
+                                  ❌ Doit être &gt; {formatDZD(baseTotal)}
+                                </p>
+                              ) : (
                                 <p className="text-xs text-emerald-600 font-medium">
                                   Commission:{" "}
-                                  {item.quantity > 1 ? (
-                                    <span>
-                                      +{formatDZD(currentSellingPrice - item.product.price)} &times;{" "}
-                                      {item.quantity} ={" "}
-                                      <strong>
-                                        +
-                                        {formatDZD(
-                                          (currentSellingPrice - item.product.price) *
-                                            item.quantity,
-                                        )}
-                                      </strong>
-                                    </span>
-                                  ) : (
-                                    <span>
-                                      +{formatDZD(currentSellingPrice - item.product.price)}
-                                    </span>
-                                  )}
+                                  <span>
+                                    +{formatDZD(currentTotalSellingPrice - baseTotal)}
+                                  </span>
                                 </p>
                               )}
                             </div>
@@ -527,9 +548,14 @@ export function CartDrawer() {
                   </div>
 
                   {/* Submit */}
+                  {showAffiliateFeatures && hasInvalidPrices && (
+                    <p className="text-xs text-destructive font-medium text-center">
+                      ❌ Certains prix de vente sont invalides (doivent être &gt; au prix de base)
+                    </p>
+                  )}
                   <Button
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (showAffiliateFeatures && hasInvalidPrices)}
                     className="w-full h-12 text-base font-bold gradient-brand text-brand-foreground shadow-brand"
                   >
                     {isSubmitting ? (

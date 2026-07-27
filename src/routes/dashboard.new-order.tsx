@@ -129,7 +129,9 @@ function NewOrderPage() {
 
   const totalPrice = customPrice === "" ? 0 : Number(customPrice);
   const baseTotal = product.price * qty;
-  const isPriceValid = totalPrice >= baseTotal;
+  // Règle : le prix affilié TOTAL doit être STRICTEMENT supérieur au prix de base × quantité
+  // ex: prix=2500, qnt=2 → totalPrice doit être > 5000 (5000 est refusé)
+  const isPriceValid = totalPrice > baseTotal;
   const totalCommission = isPriceValid ? totalPrice - baseTotal : 0;
   const unitSellingPrice = isPriceValid ? totalPrice / qty : 0;
 
@@ -138,7 +140,7 @@ function NewOrderPage() {
     if (!customerName || !phone || !wilaya)
       return toast.error("Please fill in all required customer details");
     if (!isPriceValid)
-      return toast.error("veillez mettre un prix égale ou supérieure aux prix du produit");
+      return toast.error(`Le prix de vente total doit être supérieur à ${formatDZD(baseTotal)} (${qty} × ${formatDZD(product.price)})`);
 
     createOrder.mutate(
       {
@@ -207,12 +209,11 @@ function NewOrderPage() {
                 />
                 {!isPriceValid && customPrice !== "" ? (
                   <div className="mt-1 space-y-0.5">
-                    <p className="text-sm text-destructive">
-                      {t("new_order_min_total")} {qty} {t("new_order_units")} :{" "}
-                      {formatDZD(baseTotal)}
+                    <p className="text-sm text-destructive font-medium">
+                      ❌ Le prix total doit être &gt; {formatDZD(baseTotal)}
                     </p>
                     <p className="text-sm text-destructive">
-                      {t("new_order_current_total")} {formatDZD(totalPrice)}
+                      Votre total : {formatDZD(totalPrice)} · Min requis : {formatDZD(baseTotal + 1)}
                     </p>
                   </div>
                 ) : customPrice !== "" ? (

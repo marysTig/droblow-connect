@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/lib/auth";
-import { useSupportTickets, useCreateSupportTicket } from "@/lib/queries";
+import { useSupportTickets, useCreateSupportTicket, useReplyToTicket } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,8 +75,31 @@ function formatDate(dateStr: string) {
 
 function TicketCard({ ticket }: { ticket: SupportTicket }) {
   const [expanded, setExpanded] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const replyMutation = useReplyToTicket();
+
   const cfg = ticketStatusConfig(ticket.status);
   const Icon = cfg.icon;
+
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    const newMsg = {
+      role: "affiliate" as const,
+      content: replyText.trim(),
+      created_at: new Date().toISOString(),
+    };
+    const updatedMessages = [...(ticket.messages || []), newMsg];
+    replyMutation.mutate(
+      { id: ticket.id, messages: updatedMessages },
+      {
+        onSuccess: () => {
+          toast.success("Réponse envoyée !");
+          setReplyText("");
+        },
+        onError: (err: any) => toast.error("Erreur : " + err.message),
+      }
+    );
+  };
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card overflow-hidden transition-all duration-200 hover:border-border">
@@ -113,26 +136,102 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
       {/* Expanded detail */}
       {expanded && (
         <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Description complète</p>
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+          <div className="space-y-4">
+            {/* Premier message (description) */}
+            <div className="rounded-xl bg-muted/40 border border-border/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                  <span className="text-[10px] font-bold">V</span>
+                </div>
+                <span className="text-xs font-semibold">Vous</span>
+                <span className="text-[10px] text-muted-foreground ml-auto">{formatDate(ticket.created_at)}</span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+            </div>
+
+            {/* Réponse admin initiale (pour rétrocompatibilité) */}
+            {ticket.admin_reply && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 ml-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-primary">A</span>
+                  </div>
+                  <span className="text-xs font-semibold text-primary">Support Admin</span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.admin_reply}</p>
+              </div>
+            )}
+
+            {/* Nouveau système de messages */}
+            {ticket.messages?.map((msg, i) => (
+              <div
+                key={i}
+                className={`rounded-xl border p-4 ${
+                  msg.role === "admin"
+                    ? "bg-primary/5 border-primary/20 ml-6"
+                    : "bg-muted/40 border-border/50 mr-6"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                      msg.role === "admin" ? "bg-primary/20" : "bg-muted"
+                    }`}
+                  >
+                    <span
+                      className={`text-[10px] font-bold ${
+                        msg.role === "admin" ? "text-primary" : ""
+                      }`}
+                    >
+                      {msg.role === "admin" ? "A" : "V"}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold ${
+                      msg.role === "admin" ? "text-primary" : ""
+                    }`}
+                  >
+                    {msg.role === "admin" ? "Support Admin" : "Vous"}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">
+                    {formatDate(msg.created_at)}
+                  </span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              </div>
+            ))}
           </div>
 
-          {ticket.admin_reply && (
-            <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-primary">A</span>
-                </div>
-                <span className="text-xs font-semibold text-primary">Réponse de l'admin</span>
-              </div>
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.admin_reply}</p>
-            </div>
+          {!ticket.admin_reply && (!ticket.messages || ticket.messages.length === 0) && ticket.status === "open" && (
+            <p className="text-xs text-muted-foreground/70 italic text-center py-2">
+              En attente de réponse de l'équipe support…
+            </p>
           )}
 
-          {!ticket.admin_reply && ticket.status === "open" && (
-            <p className="text-xs text-muted-foreground/70 italic">
-              En attente de réponse de l'équipe support…
+          {/* Formulaire de réponse (disponible sauf si fermé) */}
+          {ticket.status !== "closed" ? (
+            <div className="pt-2">
+              <Textarea
+                placeholder="Ajouter une réponse..."
+                className="min-h-[80px] resize-none mb-3"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                disabled={replyMutation.isPending}
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={handleReply}
+                  disabled={!replyText.trim() || replyMutation.isPending}
+                  className="gradient-brand text-brand-foreground shadow-brand"
+                >
+                  {replyMutation.isPending ? "Envoi..." : "Envoyer la réponse"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-center text-muted-foreground/70 italic py-2">
+              Ce ticket est fermé. Veuillez ouvrir un nouveau ticket pour toute autre question.
             </p>
           )}
         </div>
@@ -151,6 +250,7 @@ function SupportPage() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [filter, setFilter] = useState<"all" | TicketStatus>("all");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,6 +285,11 @@ function SupportPage() {
   };
 
   const openCount = tickets.filter((t: SupportTicket) => t.status === "open" || t.status === "in_progress").length;
+  
+  const filteredTickets = tickets.filter((t: SupportTicket) => {
+    if (filter === "all") return true;
+    return t.status === filter;
+  });
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -280,29 +385,51 @@ function SupportPage() {
       </div>
 
       {/* Tickets History */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Mes tickets</h2>
-          {tickets.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {tickets.length} ticket{tickets.length > 1 ? "s" : ""}
-            </Badge>
-          )}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">Mes tickets</h2>
+            {tickets.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {tickets.length}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Filtres */}
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                { id: "all", label: "Tous" },
+                { id: "open", label: "Ouverts" },
+                { id: "in_progress", label: "En cours" },
+                { id: "resolved", label: "Résolus" },
+                { id: "closed", label: "Fermés" },
+              ] as const
+            ).map((f) => (
+              <Button
+                key={f.id}
+                variant={filter === f.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f.id)}
+                className={`h-8 text-xs ${filter === f.id ? "gradient-brand text-white border-transparent" : "text-muted-foreground"}`}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground text-sm">Chargement…</div>
-        ) : tickets.length === 0 ? (
+        ) : filteredTickets.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center">
             <LifeBuoy className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Aucun ticket soumis pour l'instant.</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Utilisez le formulaire ci-dessus pour contacter le support.
-            </p>
+            <p className="text-sm text-muted-foreground">Aucun ticket trouvé.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {tickets.map((ticket: SupportTicket) => (
+            {filteredTickets.map((ticket: SupportTicket) => (
               <TicketCard key={ticket.id} ticket={ticket} />
             ))}
           </div>

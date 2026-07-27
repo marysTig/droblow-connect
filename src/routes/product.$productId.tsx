@@ -26,8 +26,6 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
 
 export const Route = createFileRoute("/product/$productId")({
   component: ProductPage,
@@ -49,17 +47,49 @@ function ProductPage() {
   // Initialize the main image index to the first valid (non-empty) image when product loads
   useEffect(() => {
     if (!product) return;
-    const allImgs = [product.image, ...(product.images || [])].filter(Boolean);
+    const allImgs = [...new Set([product.image, ...(product.images || [])].filter(Boolean))];
     // allImgs[0] is already the first valid image; index stays 0 — but reset on product change
     setActiveImageIdx(0);
     setImgLoaded(false);
     setMainImgError(false);
   }, [product?.id]);
 
-  // Products in same category (excluding current)
-  const related = allProducts
-    .filter((p) => p.id !== productId && p.category === product?.category)
-    .slice(0, 4);
+  // Build a Set of all image URLs that belong to OTHER products.
+  // Used to filter out images that leaked into this product's `images` field.
+  const otherProductImageUrls = new Set<string>(
+    allProducts
+      .filter((p) => p.id !== productId)
+      .flatMap((p) => [
+        p.image,
+        ...(Array.isArray(p.images) ? p.images : []),
+      ])
+      .filter((url): url is string => typeof url === "string" && url.trim() !== "")
+  );
+
+  // Products in same category (excluding current), shuffled so each product page shows different items
+  const related = (() => {
+    const sameCategory = allProducts.filter(
+      (p) => p.id !== productId && p.category === product?.category,
+    );
+    // If not enough in same category, pad with products from other categories
+    const pool =
+      sameCategory.length >= 4
+        ? sameCategory
+        : [
+            ...sameCategory,
+            ...allProducts.filter(
+              (p) => p.id !== productId && p.category !== product?.category,
+            ),
+          ];
+    // Deterministic shuffle seeded by productId so it's consistent per page but varies across products
+    const seed = productId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const shuffled = [...pool].sort((a, b) => {
+      const ha = (seed * a.id.charCodeAt(0)) % 97;
+      const hb = (seed * b.id.charCodeAt(0)) % 97;
+      return ha - hb;
+    });
+    return shuffled.slice(0, 4);
+  })();
 
   if (isLoading) {
     return (
@@ -90,32 +120,7 @@ function ProductPage() {
     );
   }
 
-  const handleDownloadImage = async () => {
-    try {
-      const response = await fetch(product.image);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${product.name.replace(/\s+/g, "_")}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success("Image téléchargée avec succès");
-    } catch {
-      toast.error("Erreur lors du téléchargement de l'image");
-    }
-  };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: product.name, url: window.location.href });
-    } else {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié dans le presse-papier");
-    }
-  };
 
   const handleAddToCart = () => {
     addToCart(product);
@@ -171,8 +176,21 @@ function ProductPage() {
           <div className="mx-auto max-w-7xl px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
               {(() => {
-                // Build full image list, filtering out empty/falsy values
-                const allImages = [product.image, ...(product.images || [])].filter(Boolean) as string[];
+                // Build the gallery from this product's own images only.
+                // Exclude any URL that also appears as an image of another product (corrupted data guard).
+                const productGallery = Array.isArray(product.images)
+                  ? product.images.filter(
+                      (url): url is string =>
+                        typeof url === "string" &&
+                        url.trim() !== "" &&
+                        !otherProductImageUrls.has(url)
+                    )
+                  : [];
+                const allImages = [...new Set(
+                  [product.image, ...productGallery].filter(
+                    (url): url is string => typeof url === "string" && url.trim() !== ""
+                  )
+                )];
 
                 // Find the first valid image starting from activeImageIdx,
                 // skipping any that have already errored (mainImgError advances the index).
@@ -245,49 +263,7 @@ function ProductPage() {
                         </div>
                       )}
 
-                      {/* Action buttons below image */}
-                      <div className="grid grid-cols-2 gap-3 mt-2">
-                        <Button
-                          variant="outline"
-                          className="h-11 font-semibold gap-2"
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            toast.info("Préparation du téléchargement...");
-                            try {
-                              const zip = new JSZip();
-                              const folder = zip.folder(product.name.replace(/\s+/g, "_"));
 
-                              for (let i = 0; i < allImages.length; i++) {
-                                const res = await fetch(allImages[i]);
-                                const blob = await res.blob();
-                                folder?.file(
-                                  `${product.name.replace(/\s+/g, "_")}_${i + 1}.jpg`,
-                                  blob,
-                                );
-                              }
-
-                              const content = await zip.generateAsync({ type: "blob" });
-                              saveAs(content, `${product.name.replace(/\s+/g, "_")}_Photos.zip`);
-                              toast.success(
-                                `Dossier ZIP contenant ${allImages.length} image(s) téléchargé avec succès !`,
-                              );
-                            } catch (error) {
-                              console.error(error);
-                              toast.error("Erreur lors de la préparation du fichier ZIP");
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4" /> {t("product_page_download")} (
-                          {allImages.length})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-11 font-semibold gap-2"
-                          onClick={handleShare}
-                        >
-                          <Share2 className="h-4 w-4" /> {t("product_page_share")}
-                        </Button>
-                      </div>
                     </div>
                   </>
                 );
@@ -395,6 +371,64 @@ function ProductPage() {
             </div>
           </div>
         </section>
+
+        {/* ══════════════════ RELATED PRODUCTS ══════════════════ */}
+        {related.length > 0 && (
+          <section className="py-16 border-t border-border">
+            <div className="mx-auto max-w-7xl px-6">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-success mb-1">
+                    À découvrir
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-bold">Produits similaires</h2>
+                </div>
+                <Button asChild variant="outline" className="hidden sm:flex gap-2">
+                  <Link to="/" hash="products">
+                    Voir tout <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                {related.map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/product/$productId"
+                    params={{ productId: p.id }}
+                    className="group rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col"
+                  >
+                    <div className="aspect-square overflow-hidden bg-muted">
+                      <img
+                        src={(() => {
+                          const isPromo = (p.category ?? "").toLowerCase().trim() === "promotion";
+                          const gallery = Array.isArray(p.images) ? p.images : [];
+                          const ordered = isPromo ? [...gallery, p.image] : [p.image, ...gallery];
+                          return ordered.find((u) => typeof u === "string" && u.trim() !== "") || p.image;
+                        })()}
+                        alt={p.name}
+                        loading="lazy"
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
+                      <h3 className="font-semibold text-sm leading-tight line-clamp-2" dir="auto">
+                        {p.name}
+                      </h3>
+                      <div className="mt-auto">
+                        <div className="text-base font-bold text-gradient-brand">
+                          {formatDZD(p.price)}
+                        </div>
+                        <span className="mt-2 inline-flex items-center text-xs text-brand font-semibold gap-1">
+                          Voir le produit <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ══════════════════ FEATURES / SELLING POINTS ══════════════════ */}
         <section className="py-16 border-y border-border bg-card/50">
@@ -524,58 +558,7 @@ function ProductPage() {
           </section>
         )}
 
-        {/* ══════════════════ RELATED PRODUCTS ══════════════════ */}
-        {related.length > 0 && (
-          <section className="py-16 border-t border-border">
-            <div className="mx-auto max-w-7xl px-6">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <div className="text-sm font-bold uppercase tracking-widest text-success mb-1">
-                    À découvrir
-                  </div>
-                  <h2 className="text-2xl md:text-3xl font-bold">Produits similaires</h2>
-                </div>
-                <Button asChild variant="outline" className="hidden sm:flex gap-2">
-                  <Link to="/" hash="products">
-                    Voir tout <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-                {related.map((p) => (
-                  <Link
-                    key={p.id}
-                    to="/product/$productId"
-                    params={{ productId: p.id }}
-                    className="group rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col"
-                  >
-                    <div className="aspect-square overflow-hidden bg-muted">
-                      <img
-                        src={p.image}
-                        alt={p.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                    <div className="p-4 flex flex-col gap-2 flex-1">
-                      <h3 className="font-semibold text-sm leading-tight line-clamp-2" dir="auto">
-                        {p.name}
-                      </h3>
-                      <div className="mt-auto">
-                        <div className="text-base font-bold text-gradient-brand">
-                          {formatDZD(p.price)}
-                        </div>
-                        <span className="mt-2 inline-flex items-center text-xs text-brand font-semibold gap-1">
-                          Voir le produit <ArrowRight className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+
       </main>
 
       <SiteFooter />

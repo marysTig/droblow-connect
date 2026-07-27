@@ -16,8 +16,9 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useAffiliateProfile, useUpdateAffiliateProfile } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import wilayasData from "../../wilayas-with-municipalities.json";
 
 export const Route = createFileRoute("/dashboard/profile")({ component: ProfilePage });
@@ -38,8 +39,12 @@ function ProfilePage() {
 }
 
 function ProfileForm({ profile }: { profile: any }) {
-  const [firstName, ...lastNameParts] = (profile?.name || "").split(" ");
-  const lastName = lastNameParts.join(" ");
+  const [firstNamePart, ...lastNameParts] = (profile?.name || "").split(" ");
+  const lastNamePart = lastNameParts.join(" ");
+
+  const [firstName, setFirstName] = useState(firstNamePart || "");
+  const [lastName, setLastName] = useState(lastNamePart || "");
+  const [phone, setPhone] = useState(profile?.phone || "");
 
   const [selectedWilaya, setSelectedWilaya] = useState(profile?.wilaya || "");
   const [selectedCommune, setSelectedCommune] = useState(profile?.commune || "");
@@ -47,6 +52,54 @@ function ProfileForm({ profile }: { profile: any }) {
   const [accountNumber, setAccountNumber] = useState(profile?.account_number || "");
 
   const updateProfile = useUpdateAffiliateProfile();
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // Notification state
+  const [notifications, setNotifications] = useState({
+    "Order updates": true,
+    "Commission unlocked": true,
+    "Withdrawal status": true,
+    "Product launches": true,
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("notification_settings");
+      if (stored) {
+        setNotifications(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleUpdateNotifications = () => {
+    localStorage.setItem("notification_settings", JSON.stringify(notifications));
+    toast.success("Notification preferences saved");
+  };
 
   const wilayaData = wilayasData.find((w) => w.nameFr === selectedWilaya);
   const communes = wilayaData?.communes || [];
@@ -99,10 +152,10 @@ function ProfileForm({ profile }: { profile: any }) {
         <TabsContent value="personal" className="mt-4">
           <Card>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <F label="First name" defaultValue={firstName} />
-              <F label="Last name" defaultValue={lastName} />
-              <F label="Email" type="email" defaultValue={profile?.email || ""} disabled />
-              <F label="Phone" defaultValue={profile?.phone || ""} />
+              <F label="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <F label="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <F label="Email" type="email" value={profile?.email || ""} disabled />
+              <F label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
               {/* Wilaya Dropdown */}
               <div>
@@ -144,7 +197,16 @@ function ProfileForm({ profile }: { profile: any }) {
                 </Select>
               </div>
             </div>
-            <Save />
+            <Save 
+              onClick={() => {
+                const newName = `${firstName} ${lastName}`.trim();
+                updateProfile.mutate(
+                  { id: profile.id, name: newName, phone, wilaya: selectedWilaya, commune: selectedCommune },
+                  { onSuccess: () => toast.success("Personal details updated") }
+                );
+              }}
+              isLoading={updateProfile.isPending}
+            />
           </Card>
         </TabsContent>
 
@@ -188,12 +250,31 @@ function ProfileForm({ profile }: { profile: any }) {
         <TabsContent value="password" className="mt-4">
           <Card>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <F label="Current password" type="password" />
+              <F 
+                label="Current password" 
+                type="password" 
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
               <div />
-              <F label="New password" type="password" />
-              <F label="Confirm new password" type="password" />
+              <F 
+                label="New password" 
+                type="password" 
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <F 
+                label="Confirm new password" 
+                type="password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
-            <Save label="Update password" />
+            <Save 
+              label="Update password" 
+              onClick={handleUpdatePassword} 
+              isLoading={isUpdatingPassword} 
+            />
           </Card>
         </TabsContent>
 
@@ -211,11 +292,16 @@ function ProfileForm({ profile }: { profile: any }) {
                     <div className="font-medium">{t}</div>
                     <div className="text-sm text-muted-foreground">{d}</div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications[t as keyof typeof notifications] ?? true}
+                    onCheckedChange={(checked) => 
+                      setNotifications(prev => ({ ...prev, [t]: checked }))
+                    }
+                  />
                 </div>
               ))}
             </div>
-            <Save />
+            <Save onClick={handleUpdateNotifications} />
           </Card>
         </TabsContent>
       </Tabs>

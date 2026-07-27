@@ -56,6 +56,7 @@ export interface Order {
   delivery_type: DeliveryType | null;
   delivery_price: number;
   status: OrderStatus;
+  cancellation_reason: string | null;
   created_at: string;
 }
 
@@ -115,6 +116,19 @@ export interface EarningsChart {
   orders: number;
 }
 
+export type NotificationType = "product_launch" | "withdrawal_update" | "commission_unlocked" | "order_update";
+
+export interface Notification {
+  id: string;
+  affiliate_id: string;
+  type: NotificationType | string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 
 export interface SupportTicket {
@@ -126,6 +140,7 @@ export interface SupportTicket {
   description: string;
   status: TicketStatus;
   admin_reply: string | null;
+  messages?: { role: "admin" | "affiliate"; content: string; created_at: string }[];
   created_at: string;
   updated_at: string;
 }

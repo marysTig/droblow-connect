@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn, parseProductName } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/demo-data";
 import { Badge } from "@/components/ui/badge";
 import type { LucideIcon } from "lucide-react";
@@ -91,4 +91,28 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
       {status}
     </Badge>
   );
+}
+
+export function ProductNameDisplay({ name }: { name: string }) {
+  const parsed = parseProductName(name);
+  
+  if (parsed) {
+    return (
+      <select 
+        className="w-full max-w-[200px] h-8 bg-transparent text-sm border border-slate-700/50 rounded-md px-2 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        title="Liste des produits"
+      >
+        <option value="" disabled selected hidden>
+          {parsed.length} produit{parsed.length > 1 ? "s" : ""}
+        </option>
+        {parsed.map((p: any, i: number) => (
+          <option key={i} value={String(i)} className="bg-slate-900 text-white">
+            {p.name} (x{p.qty})
+          </option>
+        ))}
+      </select>
+    );
+  }
+  
+  return <>{name}</>;
 }

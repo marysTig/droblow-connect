@@ -35,6 +35,7 @@ import { Logo } from "@/components/brand/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationsPopover } from "./NotificationsPopover";
 
 export function DashboardLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -161,10 +162,7 @@ export function DashboardLayout() {
             <LanguageSwitcher />
             {/* Cart icon – only on /dashboard/products */}
             {pathname === "/dashboard/products" && <CartIconButton />}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand" />
-            </Button>
+            <NotificationsPopover />
           </header>
           <main className="flex-1 p-4 md:p-8">
             <Outlet />

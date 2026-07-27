@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, type OrderStatus } from "./supabase";
+import { useEffect } from "react";
+import { supabase, type OrderStatus, type Notification } from "./supabase";
 
 // ─── Utility ─────────────────────────────────────────────────────
 export function formatDZD(n: number) {
@@ -166,6 +167,7 @@ export function useCreateProduct() {
       name: string;
       description: string;
       image: string;
+      images?: string[];
       price: number;
       category: string;
       subcategory?: string | null;
@@ -189,6 +191,7 @@ export function useUpdateProduct() {
       name?: string;
       description?: string;
       image?: string;
+      images?: string[];
       price?: number;
       category?: string;
       subcategory?: string | null;
@@ -266,6 +269,26 @@ export function usePlatformStats() {
 
 // ─── Orders ──────────────────────────────────────────────────────
 export function useOrders(affiliateId?: string) {
+  const qc = useQueryClient();
+
+  // ── Realtime sync: auto-invalidate when any order row changes ──
+  useEffect(() => {
+    const channel = supabase
+      .channel("orders-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
   return useQuery({
     queryKey: ["orders", affiliateId],
     queryFn: async () => {
@@ -281,8 +304,15 @@ export function useOrders(affiliateId?: string) {
 export function useUpdateOrderStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
-      const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    mutationFn: async ({ id, status, cancellation_reason }: { id: string; status: OrderStatus; cancellation_reason?: string | null }) => {
+      const payload: Record<string, any> = { status };
+      if (status === "cancelled") {
+        payload.cancellation_reason = cancellation_reason ?? null;
+      } else {
+        // Clear reason if status changes away from cancelled
+        payload.cancellation_reason = null;
+      }
+      const { error } = await supabase.from("orders").update(payload).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
@@ -383,9 +413,11 @@ export function useAffiliateProfile(id?: string) {
 export function useUpdateAffiliateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...fields }: { id: string; payout_method?: string; account_number?: string }) => {
-      const { error } = await supabase.from("affiliates").update(fields).eq("id", id);
+    mutationFn: async ({ id, ...fields }: { id: string; payout_method?: string; account_number?: string; name?: string; phone?: string; wilaya?: string; commune?: string; }) => {
+      const { data, error } = await supabase.from("affiliates").update(fields).eq("id", id).select().single();
       if (error) throw error;
+      if (!data) throw new Error("Update failed: Row not found or RLS blocked the update.");
+      return data;
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["affiliate", variables.id] });
@@ -540,17 +572,119 @@ export function useUpdateTicketStatus() {
       id,
       status,
       admin_reply,
+      messages,
     }: {
       id: string;
       status?: string;
       admin_reply?: string;
+      messages?: any[];
     }) => {
+      const payload: any = {};
+      if (status) payload.status = status;
+      if (admin_reply !== undefined) payload.admin_reply = admin_reply;
+      if (messages !== undefined) payload.messages = messages;
+
       const { error } = await supabase
         .from("support_tickets")
-        .update({ ...(status && { status }), ...(admin_reply !== undefined && { admin_reply }) })
+        .update(payload)
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["support_tickets"] }),
+  });
+}
+
+export function useReplyToTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      messages,
+    }: {
+      id: string;
+      messages: any[];
+    }) => {
+      // Si l'affilié répond, on repasse le ticket "en cours" (ouvert)
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ messages, status: "open" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["support_tickets"] }),
+  });
+}
+
+// ─── Notifications ───────────────────────────────────────────────
+export function useNotifications(affiliateId?: string) {
+  const qc = useQueryClient();
+
+  // ── Realtime sync: invalidate when a notification row changes ──
+  useEffect(() => {
+    if (!affiliateId) return;
+    const channel = supabase
+      .channel(`notifications-realtime-${affiliateId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `affiliate_id=eq.${affiliateId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["notifications", affiliateId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [affiliateId, qc]);
+
+  return useQuery({
+    queryKey: ["notifications", affiliateId],
+    queryFn: async () => {
+      if (!affiliateId) return [];
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("affiliate_id", affiliateId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) {
+        console.warn("[notifications] Query failed:", error.message);
+        return [];
+      }
+      return (data ?? []) as Notification[];
+    },
+    enabled: !!affiliateId,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (affiliateId: string) => {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("affiliate_id", affiliateId)
+        .eq("is_read", false);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }

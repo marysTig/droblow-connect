@@ -37,7 +37,6 @@ import {
   usePlatformStats,
   formatDZD,
   useCategories,
-  getProductImage,
 } from "@/lib/queries";
 import { FAQS } from "@/lib/demo-data";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
@@ -48,8 +47,17 @@ import { useAuth } from "@/lib/auth";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 
-function ProductImage({ src, alt }: { src: string | null; alt: string }) {
+function ProductImageCarousel({
+  images,
+  alt,
+}: {
+  images: string[];
+  alt: string;
+}) {
   const [loaded, setLoaded] = useState(false);
+
+  const validImages = images.filter((u) => typeof u === "string" && u.trim() !== "");
+  const src = validImages[0] ?? null;
 
   if (!src) {
     return (
@@ -62,39 +70,23 @@ function ProductImage({ src, alt }: { src: string | null; alt: string }) {
   }
 
   return (
-    <>
+    <div className="relative h-full w-full overflow-hidden">
       {!loaded && (
-        <div className="h-full w-full absolute inset-0 items-center justify-center bg-muted flex text-muted-foreground/30 z-0">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
+        <div className="absolute inset-0 bg-muted animate-pulse z-0" />
       )}
       <img
         src={src}
         alt={alt}
         loading="lazy"
         onLoad={() => setLoaded(true)}
-        className={`product-card-image transition-opacity duration-500 z-10 relative ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        onError={(e) => {
-          setLoaded(true);
-          const el = e.currentTarget;
-          el.style.display = "none";
-          const next = el.nextElementSibling;
-          if (next && next instanceof HTMLElement) next.style.display = "flex";
-        }}
+        onError={() => setLoaded(true)}
+        className={`product-card-image transition-opacity duration-500 z-10 relative ${loaded ? "opacity-100" : "opacity-0"}`}
       />
-      <div
-        style={{ display: "none" }}
-        className="h-full w-full absolute inset-0 items-center justify-center bg-muted text-muted-foreground/30 z-20"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      </div>
-    </>
+    </div>
   );
 }
+
+
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -476,7 +468,21 @@ function ProductsPreview() {
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <div className="product-card-image-wrapper">
-                    <ProductImage src={getProductImage(p)} alt={p.name} />
+                    {(() => {
+                      const isPromo = (p.category ?? "").toLowerCase().trim() === "promotion";
+                      const gallery = Array.isArray(p.images) 
+                        ? p.images.filter((u): u is string => typeof u === "string" && u.trim() !== "")
+                        : [];
+                      
+                      const ordered = isPromo
+                        ? (gallery.length > 0 ? gallery : [p.image])
+                        : [p.image, ...gallery];
+                        
+                      const imgs = [...new Set(
+                        ordered.filter((u): u is string => typeof u === "string" && u.trim() !== "")
+                      )];
+                      return <ProductImageCarousel images={imgs} alt={p.name} />;
+                    })()}
                   </div>
                   <div className="product-card-content">
                     <h3 className="product-card-title" dir="auto">
@@ -505,7 +511,7 @@ function ProductsPreview() {
                     className="product-card-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      addToCart({ id: p.id, name: p.name, image: getProductImage(p) ?? p.image, price: p.price });
+                      addToCart({ id: p.id, name: p.name, image: p.image, price: p.price });
                     }}
                   >
                     <ShoppingBag className="h-4 w-4 mr-1.5 inline-block" />
