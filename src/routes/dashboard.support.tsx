@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import type { SupportTicket, TicketStatus } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/dashboard/support")({
   component: () => (
@@ -74,6 +75,7 @@ function formatDate(dateStr: string) {
 // ─── Ticket Card ──────────────────────────────────────────────────────────────
 
 function TicketCard({ ticket }: { ticket: SupportTicket }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState("");
   const replyMutation = useReplyToTicket();
@@ -141,9 +143,9 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
             <div className="rounded-xl bg-muted/40 border border-border/50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                  <span className="text-[10px] font-bold">V</span>
+                  <span className="text-[10px] font-bold">{t("support_you").charAt(0)}</span>
                 </div>
-                <span className="text-xs font-semibold">Vous</span>
+                <span className="text-xs font-semibold">{t("support_you")}</span>
                 <span className="text-[10px] text-muted-foreground ml-auto">{formatDate(ticket.created_at)}</span>
               </div>
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
@@ -154,9 +156,9 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
               <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 ml-6">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-primary">A</span>
+                    <span className="text-[10px] font-bold text-primary">{t("support_admin").charAt(0)}</span>
                   </div>
-                  <span className="text-xs font-semibold text-primary">Support Admin</span>
+                  <span className="text-xs font-semibold text-primary">{t("support_admin")}</span>
                 </div>
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">{ticket.admin_reply}</p>
               </div>
@@ -183,7 +185,7 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
                         msg.role === "admin" ? "text-primary" : ""
                       }`}
                     >
-                      {msg.role === "admin" ? "A" : "V"}
+                      {msg.role === "admin" ? t("support_admin").charAt(0) : t("support_you").charAt(0)}
                     </span>
                   </div>
                   <span
@@ -191,7 +193,7 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
                       msg.role === "admin" ? "text-primary" : ""
                     }`}
                   >
-                    {msg.role === "admin" ? "Support Admin" : "Vous"}
+                    {msg.role === "admin" ? t("support_admin") : t("support_you")}
                   </span>
                   <span className="text-[10px] text-muted-foreground ml-auto">
                     {formatDate(msg.created_at)}
@@ -243,6 +245,7 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
 // ─── Main Support Page ────────────────────────────────────────────────────────
 
 function SupportPage() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const { data: tickets = [], isLoading } = useSupportTickets(user?.id);
   const createTicket = useCreateSupportTicket();
@@ -302,9 +305,9 @@ function SupportPage() {
           <LifeBuoy className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Support</h1>
+          <h1 className="text-2xl font-bold">{t("support_title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Soumettez un ticket et notre équipe vous répondra rapidement.
+            {t("support_sub")}
           </p>
         </div>
       </div>
@@ -331,12 +334,12 @@ function SupportPage() {
       <div className="rounded-2xl border border-border/60 bg-card p-6 space-y-5">
         <div className="flex items-center gap-2">
           <SendHorizontal className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Nouveau ticket</h2>
+          <h2 className="font-semibold">{t("support_new_ticket")}</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ticket-subject">Sujet *</Label>
+            <Label htmlFor="ticket-subject">{t("support_subject")}</Label>
             <Input
               id="ticket-subject"
               value={subject}
@@ -348,7 +351,7 @@ function SupportPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ticket-description">Description du problème *</Label>
+            <Label htmlFor="ticket-description">{t("support_desc")}</Label>
             <Textarea
               id="ticket-description"
               value={description}
@@ -388,7 +391,7 @@ function SupportPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold">Mes tickets</h2>
+            <h2 className="font-semibold">{t("support_my_tickets")}</h2>
             {tickets.length > 0 && (
               <Badge variant="secondary" className="text-xs">
                 {tickets.length}
@@ -425,7 +428,7 @@ function SupportPage() {
         ) : filteredTickets.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center">
             <LifeBuoy className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Aucun ticket trouvé.</p>
+            <p className="text-sm text-muted-foreground">{t("support_no_tickets")}</p>
           </div>
         ) : (
           <div className="space-y-3">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { PageHeader } from "@/components/dashboard/shared";
@@ -70,7 +70,17 @@ function ProductsPage() {
   const { addToCart } = useCart();
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const { data: dbCategories = [], isLoading: isLoadingCategories } = useCategories();
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [promoSeed, setPromoSeed] = useState(() => Math.random());
+
+  useEffect(() => {
+    if (!isLoadingProducts && selectedCategory === null) {
+      const hasPromo = products.some(p => (p.category ?? "").toLowerCase().trim() === "promotion");
+      setSelectedCategory(hasPromo ? "Promotion" : "All");
+    }
+  }, [isLoadingProducts, products, selectedCategory]);
+
+  const activeCategory = selectedCategory ?? "Promotion";
 
   const isLoading = isLoadingProducts || isLoadingCategories;
 
@@ -80,9 +90,15 @@ function ProductsPage() {
     new Set(products.map((p) => (p.category ?? "").trim()).filter(Boolean)),
   ).sort();
 
+  const hasPromo = productCategoryNames.some((c) => c.toLowerCase() === "promotion");
+  const nonPromoCategories = productCategoryNames.filter((c) => c.toLowerCase() !== "promotion");
+
+  const promoDbMatch = dbCategories.find((c) => c.name.toLowerCase().trim() === "promotion");
+
   const categoriesToDisplay = [
+    ...(hasPromo ? [{ id: "Promotion", name: "Promotion", image: promoDbMatch?.image ?? null }] : []),
     { id: "all", name: "All", image: null as string | null },
-    ...productCategoryNames.map((name) => {
+    ...nonPromoCategories.map((name) => {
       // Try to find a matching DB category for its image (case-insensitive)
       const dbMatch = dbCategories.find(
         (c) => c.name.toLowerCase().trim() === name.toLowerCase().trim(),
@@ -94,16 +110,35 @@ function ProductsPage() {
   const { q } = Route.useSearch();
   const searchQuery = q || "";
 
-  // Exact match against product category field (both trimmed)
-  const filteredProducts = products.filter((p) => {
-    if (selectedCategory !== "All" && (p.category ?? "").trim() !== selectedCategory.trim()) {
-      return false;
+  const filteredProducts = useMemo(() => {
+    let result = products.filter((p) => {
+      // When searching, ignore category filter — search ALL products
+      if (!searchQuery && activeCategory !== "All" && (p.category ?? "").trim() !== activeCategory.trim()) {
+        return false;
+      }
+      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+
+    if (activeCategory.toLowerCase() === "promotion") {
+      // Shuffle products in Promotion category consistently based on the seed
+      // Using a simple seeded-like approach based on the id to keep it stable during search
+      result = [...result].sort((a, b) => {
+        const hash = (str: string) => {
+          let h = 0;
+          for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+          return h;
+        };
+        const randA = Math.sin(hash(a.id) * promoSeed);
+        const randB = Math.sin(hash(b.id) * promoSeed);
+        return randA - randB;
+      });
     }
-    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
+
+    return result;
+  }, [products, selectedCategory, searchQuery, promoSeed]);
 
   const [visibleCount, setVisibleCount] = useState(24);
 
@@ -129,7 +164,7 @@ function ProductsPage() {
             >
               <CarouselContent className="-ml-4 py-4">
                 {categoriesToDisplay.map((cat, i) => {
-                  const isSelected = selectedCategory === (cat.id === "all" ? "All" : cat.name);
+                  const isSelected = activeCategory === (cat.id === "all" ? "All" : cat.name);
                   return (
                     <CarouselItem
                       key={cat.id || i}
@@ -139,7 +174,10 @@ function ProductsPage() {
                         className={`flex flex-col items-center group cursor-pointer h-full transition-opacity duration-300 ${isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
                         onClick={() => {
                           setSelectedCategory(cat.id === "all" ? "All" : cat.name);
-                          setVisibleCount(24); // Reset visible count on category change
+                          setVisibleCount(24);
+                          if (cat.name.toLowerCase() === "promotion") {
+                            setPromoSeed(Math.random());
+                          }
                         }}
                       >
                         <div
@@ -185,16 +223,16 @@ function ProductsPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-72 rounded-2xl border bg-card animate-pulse" />
+            <div key={i} className="aspect-[3/4] rounded-2xl border bg-card animate-pulse" />
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="text-center p-12 text-muted-foreground">{t("products_empty")}</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {filteredProducts.slice(0, visibleCount).map((p) => (
               <div
                 key={p.id}
@@ -212,40 +250,39 @@ function ProductsPage() {
                       alt={p.name} 
                       category={p.category} 
                     />
-                    <span className="absolute top-3 left-3 rounded-full bg-background/90 backdrop-blur px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider z-20">
+                    <span className="absolute top-2 left-2 rounded-full bg-background/90 backdrop-blur px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider z-20">
                       {p.category}
                     </span>
                   </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="font-semibold leading-tight" dir="auto">
+                  <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
+                    <h3 className="font-semibold text-xs sm:text-sm leading-tight line-clamp-2" dir="auto">
                       {p.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-muted-foreground">Prix</span>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">{t("product_card_price")}</span>
                       {p.is_active ? (
-                        <span className="text-base font-bold text-gradient-brand">
+                        <span className="text-sm sm:text-base font-bold text-gradient-brand">
                           {formatDZD(p.price)}
                         </span>
                       ) : (
-                        <span className="text-sm font-bold text-destructive">Rupture</span>
+                        <span className="text-xs font-bold text-destructive">{t("product_card_out_of_stock")}</span>
                       )}
                     </div>
                   </div>
                 </Link>
 
                 {/* Add to cart button */}
-                <div className="px-4 pb-4 mt-auto">
+                <div className="px-2 sm:px-4 pb-2 sm:pb-4 mt-auto">
                   {p.is_active ? (
                     <Button
                       size="sm"
-                      className="w-full gradient-brand text-brand-foreground shadow-brand"
+                      className="w-full gradient-brand text-brand-foreground shadow-brand text-xs sm:text-sm h-8 sm:h-9"
                       onClick={() => {
                         addToCart({ id: p.id, name: p.name, image: getProductImage(p) ?? p.image, price: p.price });
-                        toast.success("Produit ajouté au panier");
+                        toast.success(t("cart_added"));
                       }}
                     >
-                      <ShoppingBag className="mr-1.5 h-4 w-4" />
+                      <ShoppingBag className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
                       {t("products_add_cart")}
                     </Button>
                   ) : (
@@ -253,7 +290,7 @@ function ProductsPage() {
                       variant="outline"
                       size="sm"
                       disabled
-                      className="w-full border-destructive/20 text-destructive bg-destructive/5"
+                      className="w-full border-destructive/20 text-destructive bg-destructive/5 text-xs sm:text-sm h-8 sm:h-9"
                     >
                       {t("product_card_unavailable")}
                     </Button>
@@ -270,7 +307,7 @@ function ProductsPage() {
                 className="w-full sm:w-auto"
                 onClick={() => setVisibleCount(v => v + 24)}
               >
-                Afficher plus
+                {t("products_load_more")}
               </Button>
             </div>
           )}

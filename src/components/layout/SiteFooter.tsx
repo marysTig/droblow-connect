@@ -7,7 +7,7 @@ export function SiteFooter() {
   const { t } = useI18n();
   return (
     <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
         <div className="col-span-2">
           <Logo />
           <p className="mt-4 text-sm text-muted-foreground max-w-xs">{t("footer_desc")}</p>

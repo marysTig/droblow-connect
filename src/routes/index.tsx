@@ -221,26 +221,26 @@ function Hero() {
         className="absolute inset-0 z-0 pointer-events-none"
         style={{ width: "100%", height: "100%" }}
       />
-      <div className="mx-auto max-w-7xl px-6 py-16 md:py-24 relative z-10 w-full grid lg:grid-cols-2 gap-12 items-center -translate-y-[100px]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-16 md:py-24 relative z-10 w-full grid lg:grid-cols-2 gap-12 items-center md:-translate-y-[60px] lg:-translate-y-[100px]">
         <div className="max-w-2xl text-left">
           <h1
-            className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1]"
+            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1]"
             dir="auto"
           >
             {t("hero_title1")} <br />
             <span className="text-gradient-brand">{t("hero_title2")}</span>
           </h1>
           <p
-            className="mt-8 text-xl md:text-2xl lg:text-[26px] leading-relaxed text-white max-w-2xl"
+            className="mt-5 sm:mt-8 text-base sm:text-xl md:text-2xl lg:text-[26px] leading-relaxed text-white max-w-2xl"
             dir="auto"
           >
             {t("hero_desc")}
           </p>
-          <div className="mt-12 flex flex-col sm:flex-row gap-4">
+          <div className="mt-7 sm:mt-12 flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button
               asChild
               size="lg"
-              className="gradient-brand text-brand-foreground shadow-brand h-14 px-8 text-lg font-bold"
+              className="gradient-brand text-brand-foreground shadow-brand h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg font-bold"
             >
               <Link to="/register">
                 {t("hero_cta_primary")} <ArrowRight className="ml-2 h-5 w-5" />
@@ -250,7 +250,7 @@ function Hero() {
               asChild
               size="lg"
               variant="outline"
-              className="h-14 px-8 text-lg font-bold border-2"
+              className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg font-bold border-2"
             >
               <a href="#products">
                 <ShoppingBag className="mr-2 h-5 w-5" />
@@ -258,15 +258,15 @@ function Hero() {
               </a>
             </Button>
           </div>
-          <div className="mt-12 flex flex-wrap items-center gap-7 text-base md:text-lg font-medium text-white">
+          <div className="mt-7 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-7 text-sm sm:text-base md:text-lg font-medium text-white">
             <span className="inline-flex items-center gap-2">
-              <Check className="h-5 w-5 text-success" /> {t("hero_feat1")}
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-success" /> {t("hero_feat1")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Check className="h-5 w-5 text-success" /> {t("hero_feat2")}
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-success" /> {t("hero_feat2")}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Check className="h-5 w-5 text-success" /> {t("hero_feat3")}
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-success" /> {t("hero_feat3")}
             </span>
           </div>
         </div>
@@ -431,9 +431,9 @@ function ProductsPreview() {
   const { user } = useAuth();
   const { data: products = [], isLoading } = useProducts();
   return (
-    <section id="products" className="py-24 bg-gradient-to-b from-background to-accent/40">
-      <div className="mx-auto max-w-[1500px] px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-12 max-w-7xl mx-auto">
+    <section id="products" className="py-12 sm:py-24 bg-gradient-to-b from-background to-accent/40">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8 sm:mb-12 max-w-7xl mx-auto">
           <div>
             <div className="text-sm font-semibold uppercase tracking-widest text-success">
               {t("products_label")}

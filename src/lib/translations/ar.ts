@@ -363,6 +363,31 @@ export const ar = {
   shipping_available: "متوفر",
   shipping_unavailable: "غير متوفر",
   shipping_empty: "لا توجد تعريفة بعد.",
+
+  // ── Support Page ──────────────────────────────────────────────────
+  support_title: "الدعم الفني",
+  support_sub: "تواصل معنا لأي استفسار أو مشكلة",
+  support_new_ticket: "تذكرة جديدة",
+  support_subject: "الموضوع *",
+  support_desc: "وصف المشكلة *",
+  support_submit: "إرسال",
+  support_my_tickets: "تذاكري",
+  support_admin: "الدعم الفني",
+  support_you: "أنت",
+  support_no_tickets: "لا توجد تذاكر.",
+
+  // ── Other ─────────────────────────────────────────────────────────
+  product_card_price: "السعر",
+  products_load_more: "عرض المزيد",
+  product_not_found: "المنتج غير موجود",
+  product_not_found_desc: "هذا المنتج غير موجود أو تم حذفه.",
+  product_cod_available: "الدفع عند الاستلام متاح",
+  product_similar: "منتجات مشابهة",
+  product_fast_delivery: "توصيل سريع",
+  product_secure_payment: "دفع آمن",
+  product_affiliate_support: "دعم المسوقين",
+  error_try_again: "الرجاء المحاولة مرة أخرى.",
+  cart_added: "تمت الإضافة إلى السلة",
 };
 
 export type TranslationKey = keyof typeof ar;

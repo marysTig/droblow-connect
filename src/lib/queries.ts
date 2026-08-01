@@ -425,6 +425,22 @@ export function useUpdateAffiliateProfile() {
   });
 }
 
+export function useUnlockImmobilier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, unlock }: { id: string; unlock: boolean }) => {
+      const { error } = await supabase
+        .from("affiliates")
+        .update({ immobilier_unlocked: unlock })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["affiliates"] });
+    },
+  });
+}
+
 // ─── Withdrawals ─────────────────────────────────────────────────
 export function useWithdrawals(affiliateId?: string) {
   return useQuery({
@@ -686,5 +702,60 @@ export function useMarkAllNotificationsRead() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+// ─── Immobilier ───────────────────────────────────────────────────
+
+export function useImmobilierProducts() {
+  return useQuery({
+    queryKey: ["immobilier_products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("immobilier_products")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.warn("[immobilier_products] Query failed:", error.message);
+        return [];
+      }
+      return data ?? [];
+    },
+    retry: false,
+  });
+}
+
+export function useImportImmobilierCSV() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      rows: Array<{
+        category?: string | null;
+        title?: string | null;
+        phone?: string | null;
+        type?: string | null;
+        location?: string | null;
+        price?: string | null;
+        rooms?: string | null;
+        surface_m2?: string | null;
+        detail_url?: string | null;
+        image_url?: string | null;
+      }>
+    ) => {
+      const { error } = await supabase.from("immobilier_products").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["immobilier_products"] }),
+  });
+}
+
+export function useDeleteImmobilierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("immobilier_products").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["immobilier_products"] }),
   });
 }

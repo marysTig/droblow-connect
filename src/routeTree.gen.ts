@@ -16,12 +16,14 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as ProductProductIdRouteImport } from './routes/product.$productId'
+import { Route as ImmobilierIdRouteImport } from './routes/immobilier.$id'
 import { Route as DashboardSupportRouteImport } from './routes/dashboard.support'
 import { Route as DashboardShippingRouteImport } from './routes/dashboard.shipping'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard.products'
 import { Route as DashboardOrdersRouteImport } from './routes/dashboard.orders'
 import { Route as DashboardNewOrderRouteImport } from './routes/dashboard.new-order'
+import { Route as DashboardImmobilierRouteImport } from './routes/dashboard.immobilier'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 
 const RegisterRoute = RegisterRouteImport.update({
@@ -59,6 +61,11 @@ const ProductProductIdRoute = ProductProductIdRouteImport.update({
   path: '/product/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImmobilierIdRoute = ImmobilierIdRouteImport.update({
+  id: '/immobilier/$id',
+  path: '/immobilier/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardSupportRoute = DashboardSupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -89,6 +96,11 @@ const DashboardNewOrderRoute = DashboardNewOrderRouteImport.update({
   path: '/new-order',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardImmobilierRoute = DashboardImmobilierRouteImport.update({
+  id: '/immobilier',
+  path: '/immobilier',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEarningsRoute = DashboardEarningsRouteImport.update({
   id: '/earnings',
   path: '/earnings',
@@ -102,12 +114,14 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/immobilier': typeof DashboardImmobilierRoute
   '/dashboard/new-order': typeof DashboardNewOrderRoute
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/support': typeof DashboardSupportRoute
+  '/immobilier/$id': typeof ImmobilierIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -117,12 +131,14 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/immobilier': typeof DashboardImmobilierRoute
   '/dashboard/new-order': typeof DashboardNewOrderRoute
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/support': typeof DashboardSupportRoute
+  '/immobilier/$id': typeof ImmobilierIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard': typeof DashboardIndexRoute
 }
@@ -134,12 +150,14 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/immobilier': typeof DashboardImmobilierRoute
   '/dashboard/new-order': typeof DashboardNewOrderRoute
   '/dashboard/orders': typeof DashboardOrdersRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/shipping': typeof DashboardShippingRoute
   '/dashboard/support': typeof DashboardSupportRoute
+  '/immobilier/$id': typeof ImmobilierIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -152,12 +170,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard/earnings'
+    | '/dashboard/immobilier'
     | '/dashboard/new-order'
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
     | '/dashboard/support'
+    | '/immobilier/$id'
     | '/product/$productId'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
@@ -167,12 +187,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard/earnings'
+    | '/dashboard/immobilier'
     | '/dashboard/new-order'
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
     | '/dashboard/support'
+    | '/immobilier/$id'
     | '/product/$productId'
     | '/dashboard'
   id:
@@ -183,12 +205,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard/earnings'
+    | '/dashboard/immobilier'
     | '/dashboard/new-order'
     | '/dashboard/orders'
     | '/dashboard/products'
     | '/dashboard/profile'
     | '/dashboard/shipping'
     | '/dashboard/support'
+    | '/immobilier/$id'
     | '/product/$productId'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
@@ -199,6 +223,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ImmobilierIdRoute: typeof ImmobilierIdRoute
   ProductProductIdRoute: typeof ProductProductIdRoute
 }
 
@@ -253,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/immobilier/$id': {
+      id: '/immobilier/$id'
+      path: '/immobilier/$id'
+      fullPath: '/immobilier/$id'
+      preLoaderRoute: typeof ImmobilierIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/support': {
       id: '/dashboard/support'
       path: '/support'
@@ -295,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNewOrderRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/immobilier': {
+      id: '/dashboard/immobilier'
+      path: '/immobilier'
+      fullPath: '/dashboard/immobilier'
+      preLoaderRoute: typeof DashboardImmobilierRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/earnings': {
       id: '/dashboard/earnings'
       path: '/earnings'
@@ -307,6 +346,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardEarningsRoute: typeof DashboardEarningsRoute
+  DashboardImmobilierRoute: typeof DashboardImmobilierRoute
   DashboardNewOrderRoute: typeof DashboardNewOrderRoute
   DashboardOrdersRoute: typeof DashboardOrdersRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
@@ -318,6 +358,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEarningsRoute: DashboardEarningsRoute,
+  DashboardImmobilierRoute: DashboardImmobilierRoute,
   DashboardNewOrderRoute: DashboardNewOrderRoute,
   DashboardOrdersRoute: DashboardOrdersRoute,
   DashboardProductsRoute: DashboardProductsRoute,
@@ -337,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ImmobilierIdRoute: ImmobilierIdRoute,
   ProductProductIdRoute: ProductProductIdRoute,
 }
 export const routeTree = rootRouteImport

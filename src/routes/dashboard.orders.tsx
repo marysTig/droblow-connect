@@ -5,7 +5,7 @@ import { PageHeader, StatusBadge, ProductNameDisplay } from "@/components/dashbo
 import { formatProductName } from "@/lib/utils";
 import { formatDZD, useOrders, useUpdateOrder, useDeleteOrder } from "@/lib/queries";
 import type { OrderStatus } from "@/lib/supabase";
-import { Input } from "@/components/ui/input";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Download, ChevronLeft, ChevronRight, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -37,9 +37,9 @@ export const Route = createFileRoute("/dashboard/orders")({ component: OrdersPag
 
 function OrdersPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { data: orders = [], isLoading, error } = useOrders(user?.id);
   const deleteOrder = useDeleteOrder();
-  const [q, setQ] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const perPage = 8;
@@ -54,23 +54,18 @@ function OrdersPage() {
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
-      const matchesQ =
-        !q ||
-        o.id.toLowerCase().includes(q.toLowerCase()) ||
-        o.customer_name.toLowerCase().includes(q.toLowerCase()) ||
-        formatProductName(o.product_name).toLowerCase().includes(q.toLowerCase());
       const matchesS = status === "all" || o.status === status;
-      return matchesQ && matchesS;
+      return matchesS;
     });
-  }, [q, status, orders]);
+  }, [status, orders]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paged = filtered.slice((page - 1) * perPage, page * perPage);
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this order?")) {
+    if (confirm(t("orders_delete_confirm"))) {
       deleteOrder.mutate(id, {
-        onSuccess: () => toast.success("Order deleted"),
+        onSuccess: () => toast.success(t("orders_deleted")),
       });
     }
   };
@@ -78,28 +73,16 @@ function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Orders"
-        subtitle={`${filtered.length} orders`}
+        title={t("orders_title")}
+        subtitle={`${filtered.length} ${t("sidebar_orders").toLowerCase()}`}
         action={
           <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Export
+            <Download className="mr-2 h-4 w-4" /> {t("orders_export")}
           </Button>
         }
       />
 
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by ID, customer, product…"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9 h-10 bg-card"
-          />
-        </div>
         <Select
           value={status}
           onValueChange={(v) => {
@@ -111,12 +94,12 @@ function OrdersPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="shipped">Shipped</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="all">{t("orders_all_statuses")}</SelectItem>
+            <SelectItem value="pending">{t("orders_status_pending")}</SelectItem>
+            <SelectItem value="confirmed">{t("orders_status_confirmed")}</SelectItem>
+            <SelectItem value="shipped">{t("orders_status_shipped")}</SelectItem>
+            <SelectItem value="delivered">{t("orders_status_delivered")}</SelectItem>
+            <SelectItem value="cancelled">{t("orders_status_cancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -126,17 +109,17 @@ function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Wilaya</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Commission</TableHead>
-                <TableHead>Delivery</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("th_order_id")}</TableHead>
+                <TableHead>{t("th_product")}</TableHead>
+                <TableHead>{t("th_customer")}</TableHead>
+                <TableHead>{t("th_wilaya")}</TableHead>
+                <TableHead>{t("th_qty")}</TableHead>
+                <TableHead>{t("th_total")}</TableHead>
+                <TableHead>{t("th_commission")}</TableHead>
+                <TableHead>{t("th_commune")}</TableHead>
+                <TableHead>{t("th_status")}</TableHead>
+                <TableHead>{t("th_date")}</TableHead>
+                <TableHead className="text-right">{t("th_actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -146,13 +129,13 @@ function OrdersPage() {
                     colSpan={10}
                     className="h-32 text-center text-muted-foreground animate-pulse"
                   >
-                    Loading orders...
+                    {t("orders_loading")}
                   </TableCell>
                 </TableRow>
               ) : paged.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
-                    No orders match your filters.
+                    {t("orders_no_match")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -221,7 +204,7 @@ function OrdersPage() {
         </div>
         <div className="flex items-center justify-between p-4 border-t">
           <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            {t("orders_page_of")} {page} {t("orders_of")} {totalPages}
           </span>
           <div className="flex gap-2">
             <Button
@@ -264,6 +247,7 @@ function EditOrderDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const { t } = useI18n();
   const updateOrder = useUpdateOrder();
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -290,7 +274,7 @@ function EditOrderDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Order updated successfully");
+          toast.success(t("orders_updated"));
           onOpenChange(false);
         },
       },
@@ -301,36 +285,36 @@ function EditOrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Order {order?.id}</DialogTitle>
+          <DialogTitle>{t("orders_edit_title")} {order?.id}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label>Customer Name</Label>
+            <Label>{t("orders_customer_name")}</Label>
             <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label>Phone</Label>
+            <Label>{t("profile_phone")}</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label>Wilaya</Label>
+            <Label>{t("profile_wilaya")}</Label>
             <Input value={wilaya} onChange={(e) => setWilaya(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label>Commune</Label>
+            <Label>{t("profile_commune")}</Label>
             <Input value={commune} onChange={(e) => setCommune(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("orders_cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={updateOrder.isPending}
             className="gradient-brand text-brand-foreground border-0 shadow-brand"
           >
-            Save changes
+            {t("orders_save")}
           </Button>
         </DialogFooter>
       </DialogContent>

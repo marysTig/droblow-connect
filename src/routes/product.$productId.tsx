@@ -109,8 +109,8 @@ function ProductPage() {
         <PublicHeader />
         <div className="flex-1 flex flex-col items-center justify-center space-y-4">
           <Package className="h-16 w-16 text-muted-foreground/40" />
-          <h2 className="text-2xl font-bold">Produit introuvable</h2>
-          <p className="text-muted-foreground">Ce produit n'existe pas ou a été retiré.</p>
+          <h2 className="text-2xl font-bold">{t("product_not_found")}</h2>
+          <p className="text-muted-foreground">{t("product_not_found_desc")}</p>
           <Button variant="outline" onClick={() => navigate({ to: "/" })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Retour à l'accueil
           </Button>
@@ -124,7 +124,7 @@ function ProductPage() {
 
   const handleAddToCart = () => {
     addToCart(product);
-    toast.success("Produit ajouté au panier");
+    toast.success(t("cart_added"));
   };
 
   const handleBuyNow = () => {
@@ -137,8 +137,8 @@ function ProductPage() {
   };
 
   const TRUST_BADGES = [
-    { icon: Truck, label: "Livraison partout en Algérie", sub: "58 wilayas couvertes" },
-    { icon: ShieldCheck, label: "Paiement à la livraison", sub: "Zéro risque pour le client" },
+    { icon: Truck, label: t("product_fast_delivery"), sub: "58 wilayas couvertes" },
+    { icon: ShieldCheck, label: t("product_secure_payment"), sub: "Zéro risque pour le client" },
     { icon: Package, label: "Stock garanti", sub: "Géré par Droblow" },
     { icon: Zap, label: "Traitement rapide", sub: "Expédition en 24–48h" },
   ];
@@ -300,13 +300,13 @@ function ProductPage() {
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-sm text-success font-medium">
                     <Check className="h-4 w-4" />
-                    <span>Paiement à la livraison (COD) disponible</span>
+                    <span>{t("product_cod_available")}</span>
                   </div>
                 </div>
 
                 {/* Description */}
                 <div className="mb-8 rounded-2xl bg-muted/50 p-6 border border-border/40">
-                  <h3 className="font-semibold text-base mb-3">Description du produit</h3>
+                  <h3 className="font-semibold text-base mb-3">{t("product_page_desc")}</h3>
                   <p
                     className="text-muted-foreground whitespace-pre-line leading-relaxed text-sm"
                     dir="auto"
@@ -381,7 +381,7 @@ function ProductPage() {
                   <div className="text-sm font-bold uppercase tracking-widest text-success mb-1">
                     À découvrir
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-bold">Produits similaires</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold">{t("product_similar")}</h2>
                 </div>
                 <Button asChild variant="outline" className="hidden sm:flex gap-2">
                   <Link to="/" hash="products">
@@ -438,7 +438,7 @@ function ProductPage() {
                 <div className="h-14 w-14 rounded-2xl gradient-brand shadow-brand flex items-center justify-center">
                   <Truck className="h-7 w-7 text-brand-foreground" />
                 </div>
-                <h3 className="font-bold text-lg">Livraison rapide</h3>
+                <h3 className="font-bold text-lg">{t("product_fast_delivery")}</h3>
                 <p className="text-muted-foreground text-sm max-w-xs">
                   Disponible dans les 58 wilayas d'Algérie via nos partenaires de livraison agréés.
                 </p>
@@ -447,7 +447,7 @@ function ProductPage() {
                 <div className="h-14 w-14 rounded-2xl gradient-brand shadow-brand flex items-center justify-center">
                   <ShieldCheck className="h-7 w-7 text-brand-foreground" />
                 </div>
-                <h3 className="font-bold text-lg">Paiement sécurisé</h3>
+                <h3 className="font-bold text-lg">{t("product_secure_payment")}</h3>
                 <p className="text-muted-foreground text-sm max-w-xs">
                   Le client paie uniquement à la réception. Aucun risque, aucune avance requise.
                 </p>
@@ -456,7 +456,7 @@ function ProductPage() {
                 <div className="h-14 w-14 rounded-2xl gradient-brand shadow-brand flex items-center justify-center">
                   <Users className="h-7 w-7 text-brand-foreground" />
                 </div>
-                <h3 className="font-bold text-lg">Support affilié</h3>
+                <h3 className="font-bold text-lg">{t("product_affiliate_support")}</h3>
                 <p className="text-muted-foreground text-sm max-w-xs">
                   Notre équipe est disponible pour vous accompagner dans la vente de ce produit.
                 </p>

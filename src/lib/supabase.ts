@@ -38,6 +38,21 @@ export interface Product {
   created_at: string;
 }
 
+export interface ImmobilierProduct {
+  id: string;
+  category: string | null;
+  title: string | null;
+  phone: string | null;
+  type: string | null;
+  location: string | null;
+  price: string | null;
+  rooms: string | null;
+  surface_m2: string | null;
+  detail_url: string | null;
+  image_url: string | null;
+  created_at: string;
+}
+
 export interface Order {
   id: string;
   id_commande_review: string | null;

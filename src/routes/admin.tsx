@@ -70,6 +70,11 @@ import {
   XCircle,
   SendHorizontal,
   Info,
+  Database,
+  Sparkles,
+  Building,
+  Search,
+  Copy,
 } from "lucide-react";
 import {
   Select,
@@ -105,6 +110,10 @@ import {
   useUpdateShippingRate,
   useSupportTickets,
   useUpdateTicketStatus,
+  useImmobilierProducts,
+  useImportImmobilierCSV,
+  useDeleteImmobilierProduct,
+  useUnlockImmobilier,
 } from "@/lib/queries";
 import { WILAYAS } from "@/lib/constants";
 import { uploadToCloudinary } from "@/lib/cloudinary";
@@ -839,6 +848,179 @@ function CategoriesTab() {
   );
 }
 
+// ─── Immobilier Admin Section ──────────────────────────────────────────────
+
+function ImmobilierAdminSection() {
+  const { data: products = [], isLoading } = useImmobilierProducts();
+  const importCSV = useImportImmobilierCSV();
+  const deleteProduct = useDeleteImmobilierProduct();
+  const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      try {
+        const lines = text.split("\n").filter((l) => l.trim() !== "");
+        if (lines.length < 2) throw new Error("Fichier CSV vide ou invalide");
+
+        // Simple CSV parsing assuming comma separated and no commas in values
+        // or we could use a regex to handle basic quotes if needed, but simple split is a start
+        const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+        
+        const catIdx = headers.findIndex(h => h.includes("cat"));
+        const titreIdx = headers.findIndex(h => h.includes("title") || h.includes("titre"));
+        const typeIdx = headers.findIndex(h => h.includes("type"));
+        const locIdx = headers.findIndex(h => h.includes("loc"));
+        const prixIdx = headers.findIndex(h => h.includes("price") || h.includes("prix"));
+        const chambIdx = headers.findIndex(h => h.includes("room") || h.includes("chambre"));
+        const surfIdx = headers.findIndex(h => h.includes("surface") || h.includes("m2") || h.includes("m²"));
+        const telIdx = headers.findIndex(h => h.includes("phone") || h.includes("tel") || h.includes("tél"));
+        const detailIdx = headers.findIndex(h => h.includes("detail"));
+        const imageIdx = headers.findIndex(h => h.includes("image"));
+
+        if (titreIdx === -1) {
+          throw new Error("La colonne 'Titre' (ou title) est obligatoire dans le CSV.");
+        }
+
+        const rowsToInsert = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+          if (cols.length < headers.length) continue; // Skip malformed lines
+
+          rowsToInsert.push({
+            category: catIdx !== -1 ? cols[catIdx] : null,
+            title: cols[titreIdx],
+            type: typeIdx !== -1 ? cols[typeIdx] : null,
+            location: locIdx !== -1 ? cols[locIdx] : null,
+            price: prixIdx !== -1 ? cols[prixIdx] : null,
+            rooms: chambIdx !== -1 ? cols[chambIdx] : null,
+            surface_m2: surfIdx !== -1 ? cols[surfIdx] : null,
+            phone: telIdx !== -1 ? cols[telIdx] : null,
+            detail_url: detailIdx !== -1 ? cols[detailIdx] : null,
+            image_url: imageIdx !== -1 ? cols[imageIdx] : null,
+          });
+        }
+
+        if (rowsToInsert.length === 0) throw new Error("Aucune donnée valide à importer.");
+
+        await importCSV.mutateAsync(rowsToInsert);
+        toast.success(`${rowsToInsert.length} produits immobiliers importés avec succès.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (err: any) {
+        toast.error(err.message || "Erreur lors de l'import CSV");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const filteredProducts = products.filter(p => 
+    (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) || 
+    (p.location && p.location.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-white">Immobilier</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Gérez les annonces immobilières via import CSV.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input 
+            placeholder="Rechercher (Titre, Lieu)..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-64 bg-slate-900 border-slate-800"
+          />
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+          />
+          <Button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importCSV.isPending}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            {importCSV.isPending ? "Import en cours..." : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer CSV
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-slate-900/80">
+              <TableRow className="border-slate-800 hover:bg-transparent">
+                <TableHead className="text-slate-400">Titre</TableHead>
+                <TableHead className="text-slate-400">Catégorie</TableHead>
+                <TableHead className="text-slate-400">Type</TableHead>
+                <TableHead className="text-slate-400">Localisation</TableHead>
+                <TableHead className="text-slate-400">Prix</TableHead>
+                <TableHead className="text-slate-400">Chambres</TableHead>
+                <TableHead className="text-slate-400">Surface</TableHead>
+                <TableHead className="text-slate-400">Téléphone</TableHead>
+                <TableHead className="text-slate-400 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">Chargement...</TableCell>
+                </TableRow>
+              ) : filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">Aucune annonce trouvée.</TableCell>
+                </TableRow>
+              ) : (
+                filteredProducts.map((p) => (
+                  <TableRow key={p.id} className="border-slate-800 hover:bg-slate-800/50">
+                    <TableCell className="font-medium text-slate-200">{p.title}</TableCell>
+                    <TableCell className="text-slate-400">{p.category || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.type || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.location || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.price || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.rooms || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.surface_m2 || "-"}</TableCell>
+                    <TableCell className="text-slate-400">{p.phone || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                        onClick={() => {
+                          if (window.confirm("Supprimer cette annonce ?")) {
+                            deleteProduct.mutate(p.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Admin Panel (cPanel Style) ──────────────────────────────────────────────
 
@@ -852,7 +1034,10 @@ type AdminSection =
   | "withdrawals"
   | "shipping"
   | "stats"
-  | "support";
+  | "support"
+  | "blackchain"
+  | "skancare"
+  | "immobilier";
 
 const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ElementType; color: string; bg: string }[] = [
   { id: "home",        label: "Dashboard",    icon: LayoutDashboard, color: "text-blue-400",   bg: "bg-blue-500/10" },
@@ -864,6 +1049,9 @@ const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ElementType; col
   { id: "shipping",    label: "Livraison",    icon: Truck,           color: "text-orange-400", bg: "bg-orange-500/10" },
   { id: "stats",       label: "Statistics",   icon: BarChart2,       color: "text-pink-400",   bg: "bg-pink-500/10" },
   { id: "support",     label: "Support",      icon: LifeBuoy,        color: "text-teal-400",   bg: "bg-teal-500/10" },
+  { id: "blackchain",  label: "Blackchain",   icon: Database,        color: "text-fuchsia-400",bg: "bg-fuchsia-500/10" },
+  { id: "skancare",    label: "Skancare",     icon: Sparkles,        color: "text-sky-400",    bg: "bg-sky-500/10" },
+  { id: "immobilier",  label: "Immobilier",   icon: Building,        color: "text-indigo-400", bg: "bg-indigo-500/10" },
 ];
 
 function AdminPanel() {
@@ -891,6 +1079,7 @@ function AdminPanel() {
 
   const { data: supportTickets = [] } = useSupportTickets();
   const updateTicket = useUpdateTicketStatus();
+  const unlockImmobilier = useUnlockImmobilier();
 
   const [productDialog, setProductDialog] = useState<{ open: boolean; product?: Product | null }>({
     open: false,
@@ -918,6 +1107,8 @@ function AdminPanel() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [visibleProducts, setVisibleProducts] = useState(50);
   const [visibleOrders, setVisibleOrders] = useState(50);
+  const [affiliateSearch, setAffiliateSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
 
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
@@ -1188,17 +1379,28 @@ function AdminPanel() {
           {/* ── PRODUCTS ── */}
           {activeSection === "products" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-white">Products</h2>
                   <p className="text-sm text-slate-500 mt-0.5">{products.length} products in catalog</p>
                 </div>
-                <Button
-                  className="gradient-brand text-brand-foreground shadow-brand"
-                  onClick={() => setProductDialog({ open: true, product: null })}
-                >
-                  <Plus className="mr-1.5 h-4 w-4" /> Add product
-                </Button>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      placeholder="Search products..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="pl-9 bg-black/20 border-white/10 text-white h-10"
+                    />
+                  </div>
+                  <Button
+                    className="gradient-brand text-brand-foreground shadow-brand h-10 shrink-0"
+                    onClick={() => setProductDialog({ open: true, product: null })}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" /> Add product
+                  </Button>
+                </div>
               </div>
               <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
                 <div className="overflow-x-auto">
@@ -1213,14 +1415,34 @@ function AdminPanel() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-slate-500 py-12">
-                            No products yet. Click "Add product" to get started.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {products.slice(0, visibleProducts).map((p) => (
+                      {(() => {
+                        const filteredProducts = products.filter(p => 
+                          p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+                          p.category?.toLowerCase().includes(productSearch.toLowerCase()) ||
+                          p.description?.toLowerCase().includes(productSearch.toLowerCase())
+                        );
+
+                        if (products.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-slate-500 py-12">
+                                No products yet. Click "Add product" to get started.
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+
+                        if (filteredProducts.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-slate-500 py-12">
+                                No products found matching "{productSearch}".
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+
+                        return filteredProducts.slice(0, visibleProducts).map((p) => (
                         <TableRow key={p.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -1247,7 +1469,8 @@ function AdminPanel() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        ));
+                      })()}
                     </TableBody>
                   </Table>
                   {visibleProducts < products.length && (
@@ -1371,9 +1594,20 @@ function AdminPanel() {
           {/* ── AFFILIATES ── */}
           {activeSection === "affiliates" && (
             <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-bold text-white">Affiliates</h2>
-                <p className="text-sm text-slate-500 mt-0.5">{affiliates.length} registered affiliates</p>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Affiliates</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">{affiliates.length} registered affiliates</p>
+                </div>
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Search affiliates..."
+                    value={affiliateSearch}
+                    onChange={(e) => setAffiliateSearch(e.target.value)}
+                    className="pl-9 bg-black/20 border-white/10 text-white"
+                  />
+                </div>
               </div>
               <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
                 <Table>
@@ -1385,10 +1619,20 @@ function AdminPanel() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {affiliates.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-slate-500 py-8">No affiliates found.</TableCell></TableRow>
-                    )}
-                    {affiliates.map((a) => (
+                    {(() => {
+                      const filteredAffiliates = affiliates.filter(a => 
+                        a.name?.toLowerCase().includes(affiliateSearch.toLowerCase()) || 
+                        a.email?.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
+                        a.id?.toLowerCase().includes(affiliateSearch.toLowerCase())
+                      );
+                      
+                      if (filteredAffiliates.length === 0) {
+                        return (
+                          <TableRow><TableCell colSpan={5} className="text-center text-slate-500 py-8">No affiliates found.</TableCell></TableRow>
+                        );
+                      }
+                      
+                      return filteredAffiliates.map((a) => (
                       <TableRow key={a.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -1410,7 +1654,8 @@ function AdminPanel() {
                           </Badge>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ));
+                    })()}
                   </TableBody>
                 </Table>
               </div>
@@ -1738,6 +1983,37 @@ function AdminPanel() {
             </div>
           )}
 
+          {/* ── BLACKCHAIN ── */}
+          {activeSection === "blackchain" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Blackchain</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Section en cours de construction.</p>
+              </div>
+              <div className="rounded-2xl border p-12 text-center" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <Database className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400">Contenu de la section Blackchain à venir.</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── SKANCARE ── */}
+          {activeSection === "skancare" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">Skancare</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Section en cours de construction.</p>
+              </div>
+              <div className="rounded-2xl border p-12 text-center" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
+                <Sparkles className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400">Contenu de la section Skancare à venir.</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── IMMOBILIER ── */}
+          {activeSection === "immobilier" && <ImmobilierAdminSection />}
+
         </main>
       </div>
 
@@ -2000,6 +2276,24 @@ function AdminPanel() {
               return (
                 <div className="space-y-3">
                   <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ID</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-slate-200">{aff.id}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-slate-400 hover:text-white"
+                        onClick={() => {
+                          navigator.clipboard.writeText(aff.id);
+                          toast.success("Affiliate ID copié");
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</span>
                     <span className="text-sm text-slate-200">{aff.first_name} {aff.last_name}</span>
                   </div>
@@ -2026,6 +2320,28 @@ function AdminPanel() {
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Number</span>
                     <span className="text-sm font-mono text-slate-300">{aff.account_number || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800 mt-2">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Accès Immobilier (2000 DA)</span>
+                      <span className={`text-sm font-medium ${aff.immobilier_unlocked ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {aff.immobilier_unlocked ? 'Débloqué' : 'Verrouillé'}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={aff.immobilier_unlocked ? "outline" : "default"}
+                      className={!aff.immobilier_unlocked ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "border-slate-700 text-slate-300 hover:text-white"}
+                      onClick={() => {
+                        unlockImmobilier.mutate({ id: aff.id, unlock: !aff.immobilier_unlocked }, {
+                          onSuccess: () => toast.success(aff.immobilier_unlocked ? "Accès verrouillé" : "Accès débloqué"),
+                          onError: (err) => toast.error("Erreur: " + err.message)
+                        });
+                      }}
+                      disabled={unlockImmobilier.isPending}
+                    >
+                      {unlockImmobilier.isPending ? "..." : aff.immobilier_unlocked ? "Verrouiller" : "Débloquer"}
+                    </Button>
                   </div>
                 </div>
               );

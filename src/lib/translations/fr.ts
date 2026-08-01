@@ -368,4 +368,29 @@ export const fr: Record<TranslationKey, string> = {
   shipping_available: "Disponible",
   shipping_unavailable: "Indisponible",
   shipping_empty: "Aucun tarif disponible pour l'instant.",
+
+  // ── Support Page ──────────────────────────────────────────────────
+  support_title: "Support",
+  support_sub: "Contactez-nous pour toute question ou problème",
+  support_new_ticket: "Nouveau ticket",
+  support_subject: "Sujet *",
+  support_desc: "Description du problème *",
+  support_submit: "Envoyer",
+  support_my_tickets: "Mes tickets",
+  support_admin: "Support Admin",
+  support_you: "Vous",
+  support_no_tickets: "Aucun ticket trouvé.",
+
+  // ── Other ─────────────────────────────────────────────────────────
+  product_card_price: "Prix",
+  products_load_more: "Afficher plus",
+  product_not_found: "Produit introuvable",
+  product_not_found_desc: "Ce produit n'existe pas ou a été retiré.",
+  product_cod_available: "Paiement à la livraison (COD) disponible",
+  product_similar: "Produits similaires",
+  product_fast_delivery: "Livraison rapide",
+  product_secure_payment: "Paiement sécurisé",
+  product_affiliate_support: "Support affilié",
+  error_try_again: "Veuillez réessayer.",
+  cart_added: "Produit ajouté au panier",
 };

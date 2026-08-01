@@ -6,7 +6,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -117,19 +117,18 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { AuthProvider } from "@/lib/auth";
-import { LanguageProvider } from "@/lib/i18n";
+import { LanguageProvider, useI18n } from "@/lib/i18n";
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { useRouterState } from "@tanstack/react-router";
 
-/** Show the cart drawer only on public pages and on /dashboard/products */
+/** Show the cart drawer on public pages and ALL dashboard pages (needed for mobile bottom tab bar) */
 function CartDrawerController() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Hide on all dashboard pages EXCEPT /dashboard/products
-  const isDashboard = pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
-  const isProductsPage = pathname === "/dashboard/products";
-  if (isDashboard && !isProductsPage) return null;
+  // Hide only on admin pages
+  const isAdmin = pathname.startsWith("/admin");
+  if (isAdmin) return null;
   return <CartDrawer />;
 }
 
@@ -138,6 +137,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
+        <HtmlDirSync />
         <AuthProvider>
           <CartProvider>
             <Outlet />
@@ -149,4 +149,14 @@ function RootComponent() {
       </LanguageProvider>
     </QueryClientProvider>
   );
+}
+
+/** Syncs <html lang> and <html dir> with the active language */
+function HtmlDirSync() {
+  const { lang } = useI18n();
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = "ltr"; // Toujours LTR selon votre demande
+  }, [lang]);
+  return null;
 }

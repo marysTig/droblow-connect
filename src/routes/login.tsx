@@ -41,7 +41,7 @@ function LoginPage() {
     if (profile?.role === "admin") {
       navigate({ to: "/admin" });
     } else {
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/products" });
     }
   };
 
