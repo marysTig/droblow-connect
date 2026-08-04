@@ -7,6 +7,7 @@ export const fr: Record<TranslationKey, string> = {
   nav_faq: "FAQ",
   nav_sign_in: "Se connecter",
   nav_become_affiliate: "Devenir Affilié",
+  nav_immobilier: "Vendre des appartements",
 
   // ── Hero ────────────────────────────────────────────────────────
   hero_badge: "Vendre et gagner des commissions dans 69 wilayas",

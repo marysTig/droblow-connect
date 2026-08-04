@@ -101,8 +101,9 @@ export function ProductNameDisplay({ name }: { name: string }) {
       <select 
         className="w-full max-w-[200px] h-8 bg-transparent text-sm border border-slate-700/50 rounded-md px-2 focus:outline-none focus:ring-1 focus:ring-slate-500"
         title="Liste des produits"
+        defaultValue=""
       >
-        <option value="" disabled selected hidden>
+        <option value="" disabled hidden>
           {parsed.length} produit{parsed.length > 1 ? "s" : ""}
         </option>
         {parsed.map((p: any, i: number) => (

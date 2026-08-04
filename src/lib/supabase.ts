@@ -89,6 +89,7 @@ export interface Affiliate {
   pending_balance: number;
   total_earnings: number;
   joined: string;
+  immobilier_unlocked?: boolean;
 }
 
 export interface Withdrawal {

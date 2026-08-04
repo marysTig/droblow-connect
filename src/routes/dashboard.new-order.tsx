@@ -165,7 +165,7 @@ function NewOrderPage() {
       {
         onSuccess: () => {
           toast.success(t("new_order_success"), {
-            description: "Droblow team will confirm shortly.",
+            description: "سيقوم فريق Droblow بالتأكيد قريباً.",
           });
           navigate({ to: "/dashboard/orders" });
         },
@@ -210,10 +210,10 @@ function NewOrderPage() {
                 {!isPriceValid && customPrice !== "" ? (
                   <div className="mt-1 space-y-0.5">
                     <p className="text-sm text-destructive font-medium">
-                      ❌ Le prix total doit être &gt; {formatDZD(baseTotal)}
+                      ❌ السعر الإجمالي يجب أن يكون &gt; {formatDZD(baseTotal)}
                     </p>
                     <p className="text-sm text-destructive">
-                      Votre total : {formatDZD(totalPrice)} · Min requis : {formatDZD(baseTotal + 1)}
+                      المجموع : {formatDZD(totalPrice)} · الحد الأدنى المطلوب : {formatDZD(baseTotal + 1)}
                     </p>
                   </div>
                 ) : customPrice !== "" ? (
@@ -349,7 +349,7 @@ function NewOrderPage() {
                             className={`h-5 w-5 ${deliveryType === "home" ? "text-brand" : "text-muted-foreground"}`}
                           />
                           <Label htmlFor="home" className="cursor-pointer font-bold text-base">
-                            À Domicile
+                            التوصيل للمنزل
                           </Label>
                         </div>
                         <RadioGroupItem value="home" id="home" className="sr-only" />
@@ -364,7 +364,7 @@ function NewOrderPage() {
                           {formatDZD(selectedShippingRate.home_delivery)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Sera ajouté au total à payer par le client
+                          سيتم إضافته إلى المجموع الذي سيدفعه العميل
                         </p>
                       </div>
                     </div>
@@ -379,7 +379,7 @@ function NewOrderPage() {
                             className={`h-5 w-5 ${deliveryType === "desk" ? "text-brand" : "text-muted-foreground"}`}
                           />
                           <Label htmlFor="desk" className="cursor-pointer font-bold text-base">
-                            Point Relais / Bureau
+                            نقطة استلام / مكتب
                           </Label>
                         </div>
                         <RadioGroupItem value="desk" id="desk" className="sr-only" />
@@ -394,14 +394,14 @@ function NewOrderPage() {
                           {formatDZD(selectedShippingRate.desk_delivery)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Sera ajouté au total à payer par le client
+                          سيتم إضافته إلى المجموع الذي سيدفعه العميل
                         </p>
                       </div>
                     </div>
                   </RadioGroup>
                   {!selectedShippingRate.is_available && (
                     <p className="mt-2 text-sm text-destructive">
-                      La livraison n'est actuellement pas disponible pour cette wilaya.
+                      التوصيل غير متوفر حالياً لهذه الولاية.
                     </p>
                   )}
                 </div>

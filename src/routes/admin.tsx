@@ -850,11 +850,273 @@ function CategoriesTab() {
 
 // ─── Immobilier Admin Section ──────────────────────────────────────────────
 
+function ImmobilierActivationTab() {
+  const { data: affiliates = [], isLoading: isLoadingAffiliates } = useAffiliates();
+  const unlockImmobilier = useUnlockImmobilier();
+  const [userId, setUserId] = useState("");
+  const [affiliateSearch, setAffiliateSearch] = useState("");
+
+  // Find affiliate by pasted ID
+  const foundAffiliate = userId.trim()
+    ? affiliates.find((a) => a.id === userId.trim())
+    : null;
+
+  const handleToggle = (id: string, currentState: boolean) => {
+    unlockImmobilier.mutate(
+      { id, unlock: !currentState },
+      {
+        onSuccess: () =>
+          toast.success(!currentState ? "✅ Accès Immobilier activé !" : "🔒 Accès Immobilier désactivé."),
+        onError: (err: any) => toast.error("Erreur : " + err.message),
+      }
+    );
+  };
+
+  // Affiliates filtered for the list
+  const filteredAffiliates = affiliates.filter((a) => {
+    const q = affiliateSearch.toLowerCase();
+    return (
+      !q ||
+      a.id?.toLowerCase().includes(q) ||
+      `${a.first_name} ${a.last_name}`.toLowerCase().includes(q) ||
+      a.email?.toLowerCase().includes(q)
+    );
+  });
+
+  const unlockedCount = affiliates.filter((a) => a.immobilier_unlocked).length;
+
+  return (
+    <div className="space-y-8">
+
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {[
+          { label: "Total affiliés", value: affiliates.length, color: "text-slate-300", bg: "bg-slate-500/10" },
+          { label: "Accès activé", value: unlockedCount, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+          { label: "Accès verrouillé", value: affiliates.length - unlockedCount, color: "text-slate-500", bg: "bg-slate-700/10" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`rounded-2xl border p-4 ${s.bg}`}
+            style={{ borderColor: "hsl(220 15% 20%)" }}
+          >
+            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Activate by ID ── */}
+      <div
+        className="rounded-2xl border p-6 space-y-5"
+        style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 20%)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <Building className="h-5 w-5 text-indigo-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white text-sm">Activer l'accès Immobilier</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Collez l'ID de l'utilisateur reçu via WhatsApp pour lui activer l'accès.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Input
+            id="immobilier-user-id"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            placeholder="Collez l'ID utilisateur ici…"
+            className="flex-1 bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-600 font-mono text-sm h-11"
+          />
+          <Button
+            variant="outline"
+            className="border-slate-700 text-slate-400 hover:text-white hover:bg-white/5 h-11 px-3"
+            onClick={async () => {
+              const text = await navigator.clipboard.readText();
+              setUserId(text);
+            }}
+            title="Coller depuis le presse-papier"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Result card */}
+        {userId.trim() && (
+          <div
+            className={`rounded-xl border p-4 transition-all ${
+              foundAffiliate
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-rose-500/30 bg-rose-500/5"
+            }`}
+          >
+            {foundAffiliate ? (
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-indigo-300 font-bold text-sm">
+                      {(foundAffiliate.first_name?.[0] || foundAffiliate.email?.[0] || "?").toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {foundAffiliate.first_name} {foundAffiliate.last_name}
+                    </p>
+                    <p className="text-xs text-slate-400">{foundAffiliate.email}</p>
+                    <p className="text-xs font-mono text-slate-600 mt-0.5">{foundAffiliate.id}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                      foundAffiliate.immobilier_unlocked
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                        : "bg-slate-700/50 text-slate-400 border border-slate-700"
+                    }`}
+                  >
+                    {foundAffiliate.immobilier_unlocked ? "✅ Activé" : "🔒 Verrouillé"}
+                  </span>
+                  <Button
+                    size="sm"
+                    disabled={unlockImmobilier.isPending}
+                    className={
+                      foundAffiliate.immobilier_unlocked
+                        ? "border border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white"
+                        : "bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+                    }
+                    onClick={() =>
+                      handleToggle(foundAffiliate.id, !!foundAffiliate.immobilier_unlocked)
+                    }
+                  >
+                    {unlockImmobilier.isPending
+                      ? "..."
+                      : foundAffiliate.immobilier_unlocked
+                      ? "Désactiver"
+                      : "Activer l'accès"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-rose-400">
+                <XCircle className="h-5 w-5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Utilisateur introuvable</p>
+                  <p className="text-xs text-rose-400/70 mt-0.5">
+                    Vérifiez que l'ID collé est correct et correspond bien à un affilié inscrit.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── All affiliates list ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="font-semibold text-white text-sm">Tous les affiliés</h3>
+          <Input
+            placeholder="Rechercher par nom, email ou ID…"
+            value={affiliateSearch}
+            onChange={(e) => setAffiliateSearch(e.target.value)}
+            className="w-60 bg-slate-900 border-slate-800 h-9 text-sm"
+          />
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-900/80">
+              <TableRow className="border-slate-800 hover:bg-transparent">
+                <TableHead className="text-slate-400">Affilié</TableHead>
+                <TableHead className="text-slate-400">Email</TableHead>
+                <TableHead className="text-slate-400">ID</TableHead>
+                <TableHead className="text-slate-400 text-center">Statut Immobilier</TableHead>
+                <TableHead className="text-slate-400 text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingAffiliates ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                    Chargement…
+                  </TableCell>
+                </TableRow>
+              ) : filteredAffiliates.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                    Aucun affilié trouvé.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAffiliates.map((a) => (
+                  <TableRow key={a.id} className="border-slate-800 hover:bg-slate-800/50">
+                    <TableCell className="font-medium text-slate-200">
+                      {a.first_name} {a.last_name}
+                    </TableCell>
+                    <TableCell className="text-slate-400 text-sm">{a.email}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono text-slate-500 truncate max-w-[120px]">
+                          {a.id}
+                        </span>
+                        <button
+                          className="text-slate-600 hover:text-slate-300 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(a.id);
+                            toast.success("ID copié !");
+                          }}
+                          title="Copier l'ID"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span
+                        className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                          a.immobilier_unlocked
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                            : "bg-slate-700/40 text-slate-500 border-slate-700"
+                        }`}
+                      >
+                        {a.immobilier_unlocked ? "✅ Activé" : "🔒 Verrouillé"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={unlockImmobilier.isPending}
+                        className={
+                          a.immobilier_unlocked
+                            ? "text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 text-xs h-8 px-3"
+                            : "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 text-xs h-8 px-3"
+                        }
+                        onClick={() => handleToggle(a.id, !!a.immobilier_unlocked)}
+                      >
+                        {a.immobilier_unlocked ? "Désactiver" : "Activer"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ImmobilierAdminSection() {
   const { data: products = [], isLoading } = useImmobilierProducts();
   const importCSV = useImportImmobilierCSV();
   const deleteProduct = useDeleteImmobilierProduct();
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"annonces" | "activation">("annonces");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -870,8 +1132,6 @@ function ImmobilierAdminSection() {
         const lines = text.split("\n").filter((l) => l.trim() !== "");
         if (lines.length < 2) throw new Error("Fichier CSV vide ou invalide");
 
-        // Simple CSV parsing assuming comma separated and no commas in values
-        // or we could use a regex to handle basic quotes if needed, but simple split is a start
         const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
         
         const catIdx = headers.findIndex(h => h.includes("cat"));
@@ -892,7 +1152,7 @@ function ImmobilierAdminSection() {
         const rowsToInsert = [];
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-          if (cols.length < headers.length) continue; // Skip malformed lines
+          if (cols.length < headers.length) continue;
 
           rowsToInsert.push({
             category: catIdx !== -1 ? cols[catIdx] : null,
@@ -927,97 +1187,132 @@ function ImmobilierAdminSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white">Immobilier</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Gérez les annonces immobilières via import CSV.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input 
-            placeholder="Rechercher (Titre, Lieu)..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-64 bg-slate-900 border-slate-800"
-          />
-          <input 
-            type="file" 
-            accept=".csv" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-          />
-          <Button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importCSV.isPending}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            {importCSV.isPending ? "Import en cours..." : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                Importer CSV
-              </>
-            )}
-          </Button>
-        </div>
+      {/* ── Section Header ── */}
+      <div>
+        <h2 className="text-xl font-bold text-white">Immobilier</h2>
+        <p className="text-sm text-slate-500 mt-0.5">Gérez les annonces et les accès affiliés.</p>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-900/80">
-              <TableRow className="border-slate-800 hover:bg-transparent">
-                <TableHead className="text-slate-400">Titre</TableHead>
-                <TableHead className="text-slate-400">Catégorie</TableHead>
-                <TableHead className="text-slate-400">Type</TableHead>
-                <TableHead className="text-slate-400">Localisation</TableHead>
-                <TableHead className="text-slate-400">Prix</TableHead>
-                <TableHead className="text-slate-400">Chambres</TableHead>
-                <TableHead className="text-slate-400">Surface</TableHead>
-                <TableHead className="text-slate-400">Téléphone</TableHead>
-                <TableHead className="text-slate-400 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">Chargement...</TableCell>
-                </TableRow>
-              ) : filteredProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">Aucune annonce trouvée.</TableCell>
-                </TableRow>
-              ) : (
-                filteredProducts.map((p) => (
-                  <TableRow key={p.id} className="border-slate-800 hover:bg-slate-800/50">
-                    <TableCell className="font-medium text-slate-200">{p.title}</TableCell>
-                    <TableCell className="text-slate-400">{p.category || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.type || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.location || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.price || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.rooms || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.surface_m2 || "-"}</TableCell>
-                    <TableCell className="text-slate-400">{p.phone || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-slate-400 hover:text-red-400 hover:bg-red-400/10"
-                        onClick={() => {
-                          if (window.confirm("Supprimer cette annonce ?")) {
-                            deleteProduct.mutate(p.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {/* ── Sub-tabs ── */}
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-slate-800 bg-slate-900/60 w-fit">
+        {[
+          { id: "annonces" as const, label: "Annonces", icon: Building },
+          { id: "activation" as const, label: "Activation", icon: CheckCircle2 },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            id={`immobilier-tab-${id}`}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+              activeTab === id
+                ? "bg-indigo-600 text-white shadow-md"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* ── Annonces Tab ── */}
+      {activeTab === "annonces" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <p className="text-sm text-slate-400">
+              {products.length} annonce{products.length !== 1 ? "s" : ""} importée{products.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-2">
+              <Input 
+                placeholder="Rechercher (Titre, Lieu)..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64 bg-slate-900 border-slate-800"
+              />
+              <input 
+                type="file" 
+                accept=".csv" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+              />
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importCSV.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {importCSV.isPending ? "Import en cours..." : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importer CSV
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-900/80">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-400">Titre</TableHead>
+                    <TableHead className="text-slate-400">Catégorie</TableHead>
+                    <TableHead className="text-slate-400">Type</TableHead>
+                    <TableHead className="text-slate-400">Localisation</TableHead>
+                    <TableHead className="text-slate-400">Prix</TableHead>
+                    <TableHead className="text-slate-400">Chambres</TableHead>
+                    <TableHead className="text-slate-400">Surface</TableHead>
+                    <TableHead className="text-slate-400">Téléphone</TableHead>
+                    <TableHead className="text-slate-400 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-slate-500">Chargement...</TableCell>
+                    </TableRow>
+                  ) : filteredProducts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-slate-500">Aucune annonce trouvée.</TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredProducts.map((p) => (
+                      <TableRow key={p.id} className="border-slate-800 hover:bg-slate-800/50">
+                        <TableCell className="font-medium text-slate-200">{p.title}</TableCell>
+                        <TableCell className="text-slate-400">{p.category || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.type || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.location || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.price || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.rooms || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.surface_m2 || "-"}</TableCell>
+                        <TableCell className="text-slate-400">{p.phone || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                            onClick={() => {
+                              if (window.confirm("Supprimer cette annonce ?")) {
+                                deleteProduct.mutate(p.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Activation Tab ── */}
+      {activeTab === "activation" && <ImmobilierActivationTab />}
     </div>
   );
 }
@@ -1109,6 +1404,7 @@ function AdminPanel() {
   const [visibleOrders, setVisibleOrders] = useState(50);
   const [affiliateSearch, setAffiliateSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
 
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
@@ -1499,9 +1795,20 @@ function AdminPanel() {
           {/* ── ORDERS ── */}
           {activeSection === "orders" && (
             <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-bold text-white">All Orders</h2>
-                <p className="text-sm text-slate-500 mt-0.5">{orders.length} orders · {pendingOrders} pending</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white">All Orders</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">{orders.length} orders · {pendingOrders} pending</p>
+                </div>
+                <div className="relative w-full max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Search by affiliate ID, customer, order ID..."
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="pl-9 bg-black/20 border-white/10 text-white h-10"
+                  />
+                </div>
               </div>
               <div className="rounded-2xl border overflow-hidden" style={{ background: "hsl(220 18% 11%)", borderColor: "hsl(220 15% 18%)" }}>
                 <div className="overflow-x-auto">
@@ -1514,10 +1821,29 @@ function AdminPanel() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orders.length === 0 && (
-                        <TableRow><TableCell colSpan={13} className="text-center text-slate-500 py-8">No orders found.</TableCell></TableRow>
-                      )}
-                      {orders.slice(0, visibleOrders).map((o) => (
+                      {(() => {
+                        const filteredOrders = orders.filter(o => 
+                          o.id.toLowerCase().includes(orderSearch.toLowerCase()) || 
+                          o.affiliate_id?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.customer_name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.product_name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.affiliate_name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.id_commande_review?.toLowerCase().includes(orderSearch.toLowerCase())
+                        );
+
+                        if (orders.length === 0) {
+                          return (
+                            <TableRow><TableCell colSpan={13} className="text-center text-slate-500 py-8">No orders found.</TableCell></TableRow>
+                          );
+                        }
+
+                        if (filteredOrders.length === 0) {
+                          return (
+                            <TableRow><TableCell colSpan={13} className="text-center text-slate-500 py-8">No orders found matching "{orderSearch}".</TableCell></TableRow>
+                          );
+                        }
+
+                        return filteredOrders.slice(0, visibleOrders).map((o) => (
                         <TableRow key={o.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
                           <TableCell className="font-mono text-xs text-slate-400">{o.id}</TableCell>
                           <TableCell>
@@ -1576,7 +1902,8 @@ function AdminPanel() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        ));
+                      })()}
                     </TableBody>
                   </Table>
                   {visibleOrders < orders.length && (
@@ -1688,10 +2015,29 @@ function AdminPanel() {
                         <TableCell>
                           {(() => {
                             const aff = affiliates.find((a) => a.id === w.affiliate_id);
-                            return aff ? (
-                              <span className="text-sm font-medium text-slate-200">{aff.name}</span>
-                            ) : (
-                              <span className="font-mono text-xs text-slate-500">{w.affiliate_id ? w.affiliate_id.slice(0, 8) + "…" : "—"}</span>
+                            return (
+                              <div>
+                                {aff ? (
+                                  <span className="text-sm font-medium text-slate-200 block">{aff.name}</span>
+                                ) : (
+                                  <span className="text-sm font-medium text-slate-400 italic block">Affilié Inconnu</span>
+                                )}
+                                {w.affiliate_id && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className="font-mono text-[10px] text-slate-500">{w.affiliate_id}</span>
+                                    <button
+                                      type="button"
+                                      className="text-slate-500 hover:text-slate-300 transition-colors"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(w.affiliate_id);
+                                        toast.success("Affiliate ID copié");
+                                      }}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             );
                           })()}
                         </TableCell>
