@@ -707,6 +707,24 @@ export function useMarkAllNotificationsRead() {
 
 // ─── Immobilier ───────────────────────────────────────────────────
 
+export function useImmobilierProduct(id?: string) {
+  return useQuery({
+    queryKey: ["immobilier_product", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("immobilier_products")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+    retry: false,
+  });
+}
+
 export function useImmobilierProducts() {
   return useQuery({
     queryKey: ["immobilier_products"],
