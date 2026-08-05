@@ -15,6 +15,7 @@ import {
   LifeBuoy,
   Menu,
   Building,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart-context";
@@ -60,6 +61,7 @@ export function DashboardLayout() {
     { title: t("sidebar_shipping"), url: "/dashboard/shipping", icon: Truck },
     { title: t("sidebar_profile"), url: "/dashboard/profile", icon: UserRound },
     { title: t("nav_immobilier"), url: "/dashboard/immobilier", icon: Building },
+    { title: "دورة التسويق بالعمولة", url: "/Droblow_Affiliate_Formation.pdf", icon: BookOpen, isExternal: true },
     { title: "Support", url: "/dashboard/support", icon: LifeBuoy },
   ];
 
@@ -88,11 +90,18 @@ export function DashboardLayout() {
                   <SidebarMenu>
                     {nav.map((item) => (
                       <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                          <Link to={item.url} className="flex items-center gap-2.5">
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.title}</span>
-                          </Link>
+                        <SidebarMenuButton asChild isActive={!("isExternal" in item) && isActive(item.url)} tooltip={item.title}>
+                          {"isExternal" in item && item.isExternal ? (
+                            <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2.5">
+                              <item.icon className="h-4 w-4" />
+                              <span className="truncate">{item.title}</span>
+                            </a>
+                          ) : (
+                            <Link to={item.url} className="flex items-center gap-2.5">
+                              <item.icon className="h-4 w-4" />
+                              <span className="truncate">{item.title}</span>
+                            </Link>
+                          )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}

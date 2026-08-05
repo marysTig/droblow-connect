@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -50,12 +50,17 @@ function LoginPage() {
       title={t("login_title")}
       subtitle={t("login_subtitle")}
       footer={
-        <>
+        <div className="text-center text-base font-semibold w-full">
           {t("login_no_account")}{" "}
-          <Link to="/register" className="text-success font-medium hover:underline">
+          <Link to="/register" className="text-success font-bold text-lg hover:underline hover:brightness-125 transition-all">
             {t("login_register_link")}
           </Link>
-        </>
+          <div className="mt-6 pt-6 border-t border-border flex justify-center">
+            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-brand hover:underline font-medium text-sm sm:text-base">
+              <BookOpen className="h-5 w-5" /> دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت
+            </a>
+          </div>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">

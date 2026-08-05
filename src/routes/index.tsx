@@ -14,6 +14,7 @@ import {
   Instagram,
   Star,
   Heart,
+  BookOpen,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -257,6 +258,11 @@ function Hero() {
                 {t("hero_cta_secondary")}
               </a>
             </Button>
+          </div>
+          <div className="mt-6">
+            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-brand font-semibold hover:underline bg-brand/10 px-4 py-3 rounded-lg text-sm sm:text-base">
+              <BookOpen className="h-5 w-5" /> دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت
+            </a>
           </div>
           <div className="mt-7 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-7 text-sm sm:text-base md:text-lg font-medium text-white">
             <span className="inline-flex items-center gap-2">

@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -82,8 +82,10 @@ function RegisterPage() {
         joined: new Date().toISOString(),
       });
       if (dbError) console.error("Error creating profile:", dbError);
-      toast.success(t("new_order_success"));
-      navigate({ to: "/dashboard" });
+      toast.success("📧 Confirmez votre email — Un lien de confirmation vous a été envoyé par Droblow. Veuillez vérifier votre boîte mail pour activer votre compte.", {
+        duration: 8000,
+      });
+      setIsLoading(false);
     }
   };
 
@@ -92,12 +94,17 @@ function RegisterPage() {
       title={t("register_title")}
       subtitle={t("register_subtitle")}
       footer={
-        <>
+        <div className="text-center text-base font-semibold w-full">
           {t("register_have_account")}{" "}
           <Link to="/login" className="text-success font-medium hover:underline">
             {t("register_sign_in")}
           </Link>
-        </>
+          <div className="mt-6 pt-6 border-t border-border flex justify-center">
+            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-brand hover:underline font-medium text-sm sm:text-base">
+              <BookOpen className="h-5 w-5" /> دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت
+            </a>
+          </div>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
