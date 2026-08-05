@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SpringCarousel } from "./ui/SpringCarousel";
 import { useI18n } from "@/lib/i18n";
 import { Logo } from "@/components/brand/Logo";
-import { Globe, Rocket, ShoppingBag, ShieldCheck, UserPlus } from "lucide-react";
+import { Globe, Rocket, ShoppingBag, ShieldCheck, UserPlus, BookOpen } from "lucide-react";
 
 export function OnboardingScreen() {
   const { lang, setLang, t } = useI18n();
@@ -112,6 +112,22 @@ export function OnboardingScreen() {
             autoplay={false}
             onActiveIndexChange={setActiveIndex}
           />
+        </div>
+
+        <div className="w-full flex justify-center mb-6 relative z-10">
+          <a
+            href="/Droblow_Affiliate_Formation.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center text-center gap-2 text-brand font-semibold hover:underline bg-brand/10 px-4 py-3 rounded-lg text-sm"
+          >
+            <BookOpen className="h-5 w-5 shrink-0" />
+            <span>
+              {lang === "ar"
+                ? "دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت"
+                : "Formation Affiliate Marketing"}
+            </span>
+          </a>
         </div>
 
         <div className="w-full relative z-10">
