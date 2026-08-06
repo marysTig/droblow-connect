@@ -119,10 +119,10 @@ export function OnboardingScreen() {
             href="/Droblow_Affiliate_Formation.pdf"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center text-center gap-2 text-brand font-semibold hover:underline bg-brand/10 px-4 py-3 rounded-lg text-sm"
+            className="flex w-full items-center justify-center text-center gap-2 text-white font-semibold hover:underline bg-brand/20 px-4 py-3 rounded-lg text-sm"
           >
             <BookOpen className="h-5 w-5 shrink-0" />
-            <span>
+            <span className="text-center">
               {lang === "ar"
                 ? "دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت"
                 : "Formation Affiliate Marketing"}
