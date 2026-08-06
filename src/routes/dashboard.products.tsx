@@ -261,9 +261,14 @@ function ProductsPage() {
                     <div className="flex items-center justify-between pt-0.5">
                       <span className="text-[10px] sm:text-xs text-muted-foreground">{t("product_card_price")}</span>
                       {p.is_active ? (
-                        <span className="text-sm sm:text-base font-bold text-gradient-brand">
-                          {formatDZD(p.price)}
-                        </span>
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm sm:text-base font-bold text-gradient-brand leading-none">
+                            {formatDZD(p.price)}
+                          </span>
+                          <span className="text-[9px] sm:text-[10px] text-success font-medium mt-0.5">
+                            {t("product_in_stock")}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-xs font-bold text-destructive">{t("product_card_out_of_stock")}</span>
                       )}

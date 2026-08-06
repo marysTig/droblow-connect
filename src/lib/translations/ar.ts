@@ -339,6 +339,7 @@ export const ar = {
   product_card_view: "عرض المنتج",
   product_card_unavailable: "غير متوفر",
   product_card_out_of_stock: "نفدت الكمية",
+  product_in_stock: "الكمية متوفرة",
   cart_title: "سلة التسوق",
   cart_empty: "سلة التسوق فارغة",
   cart_continue: "مواصلة التسوق",

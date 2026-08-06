@@ -415,8 +415,15 @@ function ProductPage() {
                         {p.name}
                       </h3>
                       <div className="mt-auto">
-                        <div className="text-base font-bold text-gradient-brand">
-                          {formatDZD(p.price)}
+                        <div className="flex flex-col items-start">
+                          <div className="text-base font-bold text-gradient-brand leading-none">
+                            {formatDZD(p.price)}
+                          </div>
+                          {p.is_active && (
+                            <span className="text-[9px] text-success font-medium mt-1">
+                              {t("product_in_stock")}
+                            </span>
+                          )}
                         </div>
                         <span className="mt-2 inline-flex items-center text-xs text-brand font-semibold gap-1">
                           Voir le produit <ArrowRight className="h-3 w-3" />
@@ -473,7 +480,7 @@ function ProductPage() {
               <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-success/30 blur-3xl pointer-events-none" />
               <div className="relative">
                 <div className="inline-flex items-center gap-2 rounded-full bg-brand/20 px-4 py-1.5 text-brand text-sm font-bold mb-5">
-                  <Zap className="h-4 w-4" /> Produit disponible
+                  <Zap className="h-4 w-4" /> {t("product_in_stock")}
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" dir="auto">
                   Commander ce produit

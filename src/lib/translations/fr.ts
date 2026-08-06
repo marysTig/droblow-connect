@@ -343,6 +343,7 @@ export const fr: Record<TranslationKey, string> = {
   product_card_view: "Voir le produit",
   product_card_unavailable: "Indisponible",
   product_card_out_of_stock: "Rupture de stock",
+  product_in_stock: "Quantité disponible",
   cart_title: "Mon Panier",
   cart_empty: "Votre panier est vide",
   cart_continue: "Continuer vos achats",
