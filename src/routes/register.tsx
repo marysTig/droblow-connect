@@ -44,10 +44,25 @@ function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.wilaya || !form.commune) {
+    if (
+      !form.firstName ||
+      !form.lastName ||
+      !form.email ||
+      !form.phone ||
+      !form.password ||
+      !form.wilaya ||
+      !form.commune
+    ) {
       toast.error(t("new_order_fill_all"));
       return;
     }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(form.phone)) {
+      toast.error("Le numéro de téléphone doit contenir 10 chiffres");
+      return;
+    }
+
     setIsLoading(true);
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -145,9 +160,17 @@ function RegisterPage() {
           <Label htmlFor="phone">{t("register_phone")}</Label>
           <Input
             id="phone"
+            type="tel"
             value={form.phone}
-            onChange={handleChange}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '');
+              if (val.length <= 10) {
+                setForm({ ...form, phone: val });
+              }
+            }}
             required
+            pattern="\d{10}"
+            maxLength={10}
             className="mt-1.5 h-11"
           />
         </div>
