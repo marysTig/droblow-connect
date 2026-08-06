@@ -6,7 +6,7 @@ export const fr: Record<TranslationKey, string> = {
   nav_products: "Produits",
   nav_faq: "FAQ",
   nav_sign_in: "Se connecter",
-  nav_become_affiliate: "Devenir Affilié",
+  nav_become_affiliate: "Commencer à gagner",
   nav_immobilier: "Vendre des appartements",
 
   // ── Hero ────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ export const fr: Record<TranslationKey, string> = {
   hero_title2: "Gagnez sur chaque livraison.",
   hero_desc:
     "Rejoignez Droblow Affiliate et commencez à vendre des produits physiques en Algérie. Nous gérons le stock, la livraison — vous promouvez et gagnez.",
-  hero_cta_primary: "Devenir Affilié",
+  hero_cta_primary: "Commencer à gagner",
   hero_cta_secondary: "Voir les produits",
   hero_feat1: "Gratuit pour toujours",
   hero_feat2: "Paiement en 48h",
@@ -118,7 +118,7 @@ export const fr: Record<TranslationKey, string> = {
   login_register_link: "S'inscrire",
 
   // ── Register ─────────────────────────────────────────────────────
-  register_title: "Devenir Affilié",
+  register_title: "Commencer à gagner",
   register_subtitle: "Commencez à gagner sur les commandes livrées en Algérie.",
   register_first_name: "Prénom",
   register_last_name: "Nom",

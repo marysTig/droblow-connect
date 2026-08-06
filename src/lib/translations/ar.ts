@@ -4,7 +4,7 @@ export const ar = {
   nav_products: "المنتجات",
   nav_faq: "الأسئلة الشائعة",
   nav_sign_in: "تسجيل الدخول",
-  nav_become_affiliate: "انضم كمسوّق",
+  nav_become_affiliate: "ابدأ الكسب",
   nav_immobilier: "بيع الشقق",
 
   // ── Hero ────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ export const ar = {
   hero_title2: "اكسب من كل طلب يُسلَّم.",
   hero_desc:
     "سجّل الآن في Droblow Affiliate وابدأ تجارتك بدون رأس مال. نحن نوفر السلع ونتكفل بالتوصيل، لتتفرغ أنت للتسويق وتحقيق الأرباح.",
-  hero_cta_primary: "انضم كمسوّق",
+  hero_cta_primary: "ابدأ الكسب",
   hero_cta_secondary: "تصفح المنتجات",
   hero_feat1: "مجاني للأبد",
   hero_feat2: "دفع خلال 48 ساعة",
@@ -115,7 +115,7 @@ export const ar = {
   login_register_link: "سجّل الآن",
 
   // ── Register ─────────────────────────────────────────────────────
-  register_title: "انضم كمسوّق",
+  register_title: "ابدأ الكسب",
   register_subtitle: "ابدأ الكسب من الطلبات المُسلَّمة في كل الجزائر.",
   register_first_name: "الاسم",
   register_last_name: "اللقب",
