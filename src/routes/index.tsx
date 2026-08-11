@@ -283,16 +283,11 @@ function Hero() {
 }
 
 function StatsBar() {
-  const { t } = useI18n();
-  const { data: stats } = usePlatformStats();
   const items = [
-    {
-      label: t("stats_affiliates"),
-      value: stats ? stats.active_affiliates.toLocaleString() + "+" : "—",
-    },
-    { label: t("stats_products"), value: stats ? stats.products_count.toLocaleString() : "—" },
-    { label: t("stats_delivered"), value: stats ? stats.orders_delivered.toLocaleString() : "—" },
-    { label: t("stats_commissions"), value: stats ? formatDZD(stats.commissions_paid) : "—" },
+    { label: "مسوق نشط", value: "+120" },
+    { label: "طلب مكتمل", value: "+850" },
+    { label: "أرباح مدفوعة", value: "+125 000 دج" },
+    { label: "عملية مكتملة", value: "+1 200" },
   ];
   return (
     <section className="border-y border-border bg-card">
