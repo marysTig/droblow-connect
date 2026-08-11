@@ -48,7 +48,7 @@ export function ProductsHubCards() {
   }, [pathname]);
 
   return (
-    <div id="hub-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8" dir="rtl">
+    <div id="hub-cards" className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-8" dir="rtl">
       
       {/* Immobilier Card */}
       <div 
@@ -69,23 +69,24 @@ export function ProductsHubCards() {
           }}
         />
 
-        <div className="relative z-10 p-6 sm:p-8 flex flex-col h-full min-h-[300px]">
+        <div className="relative z-10 p-4 sm:p-6 md:p-8 flex flex-col h-full min-h-[160px] sm:min-h-[250px] md:min-h-[300px]">
           {/* Top Badge */}
-          <div className="flex items-center w-fit gap-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-bold mb-6 backdrop-blur-md">
-            <Home className="w-3.5 h-3.5" />
-            <span>جديد في Droblow</span>
+          <div className="flex items-center w-fit gap-1 sm:gap-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold mb-3 sm:mb-6 backdrop-blur-md">
+            <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">جديد في Droblow</span>
+            <span className="sm:hidden">جديد</span>
           </div>
 
           {/* Title & Subtitle */}
-          <div className="mb-8">
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-3 tracking-tight">بيع الشقق</h2>
-            <p className="text-emerald-50/80 text-sm sm:text-base font-medium">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-1 sm:mb-3 tracking-tight">بيع الشقق</h2>
+            <p className="text-emerald-50/80 text-[10px] sm:text-xs md:text-base font-medium leading-tight">
               بِع واربح عمولتك
             </p>
           </div>
 
           {/* Features */}
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
+          <div className="hidden sm:flex flex-wrap gap-2 sm:gap-3 mb-8">
             <div className="flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md text-emerald-100 px-3 py-1.5 rounded-xl text-xs font-medium">
               <Percent className="w-3.5 h-3.5 text-emerald-400" />
               <span dir="ltr">40,000 دج عمولة</span>
@@ -101,15 +102,15 @@ export function ProductsHubCards() {
           </div>
 
           {/* Actions */}
-          <div className="mt-auto flex flex-wrap gap-3">
+          <div className="mt-auto flex flex-wrap gap-2 sm:gap-3">
             <Link
               to="/dashboard/immobilier"
               resetScroll={false}
               onClick={handleScroll}
-              className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.5)] flex-1 sm:flex-none min-w-[140px]"
+              className="flex items-center justify-center gap-1 sm:gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.5)] flex-1 sm:flex-none min-w-0 sm:min-w-[140px] text-[10px] sm:text-sm md:text-base w-full"
             >
               <span>اكتشف الشقق</span>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             </Link>
           </div>
         </div>
@@ -137,23 +138,24 @@ export function ProductsHubCards() {
           <ShoppingBag className="w-32 h-32 text-fuchsia-500/30" />
         </div>
 
-        <div className="relative z-10 p-6 sm:p-8 flex flex-col h-full min-h-[300px]">
+        <div className="relative z-10 p-4 sm:p-6 md:p-8 flex flex-col h-full min-h-[160px] sm:min-h-[250px] md:min-h-[300px]">
           {/* Top Badge */}
-          <div className="flex items-center w-fit gap-2 bg-violet-500/20 border border-violet-500/30 text-violet-300 px-3 py-1.5 rounded-full text-xs font-bold mb-6 backdrop-blur-md">
-            <ShoppingBag className="w-3.5 h-3.5" />
+          <div className="flex items-center w-fit gap-1 sm:gap-2 bg-violet-500/20 border border-violet-500/30 text-violet-300 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold mb-3 sm:mb-6 backdrop-blur-md">
+            <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>تسوق الآن</span>
           </div>
 
           {/* Title & Subtitle */}
-          <div className="mb-8">
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-3 tracking-tight">المنتجات</h2>
-            <p className="text-violet-100/80 text-sm sm:text-base font-medium">
-              تسوق آلاف المنتجات بأفضل الأسعار
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-1 sm:mb-3 tracking-tight">المنتجات</h2>
+            <p className="text-violet-100/80 text-[10px] sm:text-xs md:text-base font-medium leading-tight">
+              <span className="hidden sm:inline">تسوق آلاف المنتجات بأفضل الأسعار</span>
+              <span className="sm:hidden">آلاف المنتجات</span>
             </p>
           </div>
 
           {/* Features */}
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
+          <div className="hidden sm:flex flex-wrap gap-2 sm:gap-3 mb-8">
             <div className="flex items-center gap-1.5 border border-violet-500/30 bg-violet-500/10 backdrop-blur-md text-violet-100 px-3 py-1.5 rounded-xl text-xs font-medium">
               <Truck className="w-3.5 h-3.5 text-violet-400" />
               <span>توصيل سريع</span>
@@ -169,15 +171,15 @@ export function ProductsHubCards() {
           </div>
 
           {/* Actions */}
-          <div className="mt-auto flex flex-wrap gap-3">
+          <div className="mt-auto flex flex-wrap gap-2 sm:gap-3">
             <Link
               to="/dashboard/products"
               resetScroll={false}
               onClick={handleScroll}
-              className="flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] w-fit min-w-[160px]"
+              className="flex items-center justify-center gap-1 sm:gap-2 bg-violet-600 hover:bg-violet-500 text-white px-3 py-2 sm:px-8 sm:py-3 rounded-lg sm:rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] flex-1 sm:flex-none min-w-0 sm:min-w-[160px] text-[10px] sm:text-sm md:text-base w-full"
             >
               <span>تصفح المنتجات</span>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             </Link>
           </div>
         </div>
