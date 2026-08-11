@@ -16,7 +16,7 @@ import {
   Heart,
   BookOpen,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Carousel,
   CarouselContent,
@@ -431,6 +431,13 @@ function ProductsPreview() {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { data: products = [], isLoading } = useProducts();
+
+  const randomProducts = useMemo(() => {
+    if (!products.length) return [];
+    const shuffled = [...products].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  }, [products]);
+
   return (
     <section id="products" className="py-12 sm:py-24 bg-gradient-to-b from-background to-accent/40">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
@@ -457,7 +464,7 @@ function ProductsPreview() {
           </div>
         ) : (
           <div className="product-grid">
-            {products.slice(0, 6).map((p) => (
+            {randomProducts.map((p) => (
               <div
                 key={p.id}
                 className="product-card"
