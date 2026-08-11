@@ -14,6 +14,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useEffect } from "react";
 
 export function ProductsHubCards() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -22,8 +23,32 @@ export function ProductsHubCards() {
   const isImmobilierActive = pathname.startsWith("/dashboard/immobilier");
   const isProductsActive = pathname.startsWith("/dashboard/products");
 
+  const handleScroll = () => {
+    sessionStorage.setItem("autoScrollToHubContent", "true");
+    setTimeout(() => {
+      const el = document.getElementById("hub-cards");
+      if (el) {
+        const y = el.getBoundingClientRect().bottom + window.scrollY;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (sessionStorage.getItem("autoScrollToHubContent") === "true") {
+      sessionStorage.removeItem("autoScrollToHubContent");
+      setTimeout(() => {
+        const el = document.getElementById("hub-cards");
+        if (el) {
+          const y = el.getBoundingClientRect().bottom + window.scrollY;
+          window.scrollTo({ top: y, behavior: "smooth" });
+        }
+      }, 400);
+    }
+  }, [pathname]);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8" dir="rtl">
+    <div id="hub-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8" dir="rtl">
       
       {/* Immobilier Card */}
       <div 
@@ -79,6 +104,8 @@ export function ProductsHubCards() {
           <div className="mt-auto flex flex-wrap gap-3">
             <Link
               to="/dashboard/immobilier"
+              resetScroll={false}
+              onClick={handleScroll}
               className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.5)] flex-1 sm:flex-none min-w-[140px]"
             >
               <span>اكتشف الشقق</span>
@@ -145,6 +172,8 @@ export function ProductsHubCards() {
           <div className="mt-auto flex flex-wrap gap-3">
             <Link
               to="/dashboard/products"
+              resetScroll={false}
+              onClick={handleScroll}
               className="flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] w-fit min-w-[160px]"
             >
               <span>تصفح المنتجات</span>
