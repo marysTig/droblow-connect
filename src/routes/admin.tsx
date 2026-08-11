@@ -114,6 +114,7 @@ import {
   useImportImmobilierCSV,
   useDeleteImmobilierProduct,
   useUnlockImmobilier,
+  useDeleteAffiliate,
 } from "@/lib/queries";
 import { WILAYAS } from "@/lib/constants";
 import { uploadToCloudinary } from "@/lib/cloudinary";
@@ -1361,6 +1362,7 @@ function AdminPanel() {
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
   const updateWithdrawal = useUpdateWithdrawalStatus();
+  const deleteAffiliate = useDeleteAffiliate();
   const deleteProduct = useDeleteProduct();
   const updateProduct = useUpdateProduct();
 
@@ -1392,9 +1394,12 @@ function AdminPanel() {
   const [ticketDialog, setTicketDialog] = useState<{ open: boolean; ticket?: SupportTicket | null }>({
     open: false,
   });
-    const [affiliateInfoDialog, setAffiliateInfoDialog] = useState<{ open: boolean; affiliateId?: string | null }>({
-      open: false,
-    });
+  const [affiliateInfoDialog, setAffiliateInfoDialog] = useState<{ open: boolean; affiliateId?: string | null }>({
+    open: false,
+  });
+  const [deleteAffiliateDialog, setDeleteAffiliateDialog] = useState<{ open: boolean; id?: string; name?: string }>({
+    open: false,
+  });
   const [ticketReply, setTicketReply] = useState("");
   const [ticketStatusEdit, setTicketStatusEdit] = useState<TicketStatus>("open");
 
@@ -1924,12 +1929,12 @@ function AdminPanel() {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-white">Affiliates</h2>
-                  <p className="text-sm text-slate-500 mt-0.5">{affiliates.length} registered affiliates</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{affiliates.length} affiliés inscrits</p>
                 </div>
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <Input
-                    placeholder="Search affiliates..."
+                    placeholder="Rechercher un affilié..."
                     value={affiliateSearch}
                     onChange={(e) => setAffiliateSearch(e.target.value)}
                     className="pl-9 bg-black/20 border-white/10 text-white"
@@ -1940,48 +1945,68 @@ function AdminPanel() {
                 <Table>
                   <TableHeader>
                     <TableRow style={{ borderColor: "hsl(220 15% 18%)" }}>
-                      {["Affiliate", "Email", "Earnings", "Joined", "Status"].map((h) => (
-                        <TableHead key={h} className="text-slate-500">{h}</TableHead>
+                      {["Affilié", "Email", "Gains", "Inscrit le", "Statut", "Actions"].map((h) => (
+                        <TableHead key={h} className={`text-slate-500 ${h === "Actions" ? "text-right" : ""}`}>{h}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      const filteredAffiliates = affiliates.filter(a => 
-                        a.name?.toLowerCase().includes(affiliateSearch.toLowerCase()) || 
+                      const filteredAffiliates = affiliates.filter(a =>
+                        a.name?.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
                         a.email?.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
                         a.id?.toLowerCase().includes(affiliateSearch.toLowerCase())
                       );
-                      
+
                       if (filteredAffiliates.length === 0) {
                         return (
-                          <TableRow><TableCell colSpan={5} className="text-center text-slate-500 py-8">No affiliates found.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={6} className="text-center text-slate-500 py-8">Aucun affilié trouvé.</TableCell></TableRow>
                         );
                       }
-                      
+
                       return filteredAffiliates.map((a) => (
-                      <TableRow key={a.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-sm">
-                              {a.name?.[0]?.toUpperCase() ?? "?"}
+                        <TableRow key={a.id} className="hover:bg-white/2" style={{ borderColor: "hsl(220 15% 14%)" }}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                                {a.name?.[0]?.toUpperCase() ?? "?"}
+                              </div>
+                              <div>
+                                <div className="font-medium text-slate-200">{a.name}</div>
+                                <div className="text-xs text-slate-500 font-mono">{a.id.slice(0, 12)}…</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-medium text-slate-200">{a.name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{a.id.slice(0, 12)}…</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-400">{a.email}</TableCell>
-                        <TableCell className="font-semibold text-emerald-400">{formatDZD(a.total_earnings)}</TableCell>
-                        <TableCell className="text-xs text-slate-500">{new Date(a.joined).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={a.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}>
-                            {a.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ));
+                          </TableCell>
+                          <TableCell className="text-slate-400">{a.email}</TableCell>
+                          <TableCell className="font-semibold text-emerald-400">{formatDZD(a.total_earnings)}</TableCell>
+                          <TableCell className="text-xs text-slate-500">{new Date(a.joined).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={a.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}>
+                              {a.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                              title="Voir les informations"
+                              onClick={() => setAffiliateInfoDialog({ open: true, affiliateId: a.id })}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+                              title="Supprimer l'affilié"
+                              onClick={() => setDeleteAffiliateDialog({ open: true, id: a.id, name: a.name ?? a.email ?? a.id })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ));
                     })()}
                   </TableBody>
                 </Table>
@@ -2700,6 +2725,43 @@ function AdminPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── DELETE AFFILIATE DIALOG ── */}
+      <AlertDialog open={deleteAffiliateDialog.open} onOpenChange={(open) => !open && setDeleteAffiliateDialog({ open: false })}>
+        <AlertDialogContent className="bg-slate-900 border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-rose-400" />
+              Supprimer l'affilié
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Voulez-vous vraiment supprimer <span className="font-semibold text-slate-200">{deleteAffiliateDialog.name}</span> de la base de données ?<br />
+              Cette action est <span className="text-rose-400 font-semibold">irréversible</span> et supprimera toutes les données associées à cet affilié.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-500 text-white border-0"
+              disabled={deleteAffiliate.isPending}
+              onClick={() => {
+                if (!deleteAffiliateDialog.id) return;
+                deleteAffiliate.mutate(deleteAffiliateDialog.id, {
+                  onSuccess: () => {
+                    toast.success(`Affilié "${deleteAffiliateDialog.name}" supprimé avec succès.`);
+                    setDeleteAffiliateDialog({ open: false });
+                  },
+                  onError: (err: any) => toast.error("Erreur lors de la suppression : " + err.message),
+                });
+              }}
+            >
+              {deleteAffiliate.isPending ? "Suppression…" : "Supprimer définitivement"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── CANCELLATION REASON DIALOG ── */}
       <Dialog

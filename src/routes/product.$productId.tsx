@@ -22,7 +22,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
-import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
@@ -37,7 +36,6 @@ function ProductPage() {
   const { data: allProducts = [] } = useProducts();
   const { data: testimonials = [] } = useTestimonials();
   const { addToCart } = useCart();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -129,11 +127,7 @@ function ProductPage() {
 
   const handleBuyNow = () => {
     addToCart(product);
-    if (user) {
-      navigate({ to: "/dashboard/new-order", search: { productId: product.id } });
-    } else {
-      navigate({ to: "/login" });
-    }
+    // Le panier s'ouvre automatiquement via setIsDrawerOpen(true) dans addToCart
   };
 
   const TRUST_BADGES = [

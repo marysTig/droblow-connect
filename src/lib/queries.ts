@@ -425,6 +425,19 @@ export function useUpdateAffiliateProfile() {
   });
 }
 
+export function useDeleteAffiliate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("affiliates").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["affiliates"] });
+    },
+  });
+}
+
 export function useUnlockImmobilier() {
   const qc = useQueryClient();
   return useMutation({
