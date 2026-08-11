@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useImmobilierProducts, useAffiliateProfile } from "@/lib/queries";
 import { PageHeader } from "@/components/dashboard/shared";
+import { ProductsHubCards } from "@/components/dashboard/shared/ProductsHubCards";
 import {
   Search, Building, MapPin, BedDouble, MoveDiagonal, Info,
   MessageCircle, Lock, CheckCircle2, CreditCard, X,
@@ -181,11 +182,16 @@ function DashboardImmobilier() {
       {/* Paywall modal */}
       {paywallOpen && <PaywallModal onClose={() => setPaywallOpen(false)} />}
 
-      <PageHeader
-        title={t("nav_immobilier")}
-        description={isUnlocked ? "اكتشف عروضنا العقارية." : "Section payante — débloquez votre accès."}
-        icon={Building}
-      />
+      <ProductsHubCards />
+
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-primary" dir="auto">
+          {t("nav_immobilier")}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isUnlocked ? "اكتشف عروضنا العقارية." : "Section payante — débloquez votre accès."}
+        </p>
+      </div>
 
       {isLoadingProfile ? (
         <div className="flex items-center justify-center min-h-[40vh]">

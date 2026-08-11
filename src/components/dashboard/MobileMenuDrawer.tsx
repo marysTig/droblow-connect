@@ -57,7 +57,6 @@ export function MobileMenuDrawer({ open, onClose }: MobileMenuDrawerProps) {
     { title: t("sidebar_earnings"), url: "/dashboard/earnings", icon: Wallet },
     { title: t("sidebar_shipping"), url: "/dashboard/shipping", icon: Truck },
     { title: t("sidebar_profile"), url: "/dashboard/profile", icon: UserRound },
-    { title: t("nav_immobilier"), url: "/dashboard/immobilier", icon: Building },
     { title: "Support", url: "/dashboard/support", icon: LifeBuoy },
   ];
 

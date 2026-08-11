@@ -25,6 +25,7 @@ import { useCart } from "@/lib/cart-context";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { generateIntelligentDescription } from "@/lib/utils/product";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/product/$productId")({
   component: ProductPage,
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/product/$productId")({
 
 function ProductPage() {
   const { productId } = Route.useParams();
+  const { user } = useAuth();
   const { data: product, isLoading, error } = useProduct(productId);
   const { data: allProducts = [] } = useProducts();
   const { data: testimonials = [] } = useTestimonials();

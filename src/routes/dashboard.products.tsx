@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { PageHeader } from "@/components/dashboard/shared";
+import { ProductsHubCards } from "@/components/dashboard/shared/ProductsHubCards";
 import { formatDZD, getProductImage, useProducts, useCategories } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, ImageIcon } from "lucide-react";
@@ -144,6 +145,8 @@ function ProductsPage() {
 
   return (
     <div className="space-y-6">
+      <ProductsHubCards />
+
       <div className="text-center mb-2">
         <h1 className="text-3xl font-bold tracking-tight text-primary" dir="auto">
           {t("products_page_title")}

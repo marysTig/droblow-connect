@@ -60,7 +60,6 @@ export function DashboardLayout() {
     { title: t("sidebar_earnings"), url: "/dashboard/earnings", icon: Wallet },
     { title: t("sidebar_shipping"), url: "/dashboard/shipping", icon: Truck },
     { title: t("sidebar_profile"), url: "/dashboard/profile", icon: UserRound },
-    { title: t("nav_immobilier"), url: "/dashboard/immobilier", icon: Building },
     { title: "دورة التسويق بالعمولة", url: "/Droblow_Affiliate_Formation.pdf", icon: BookOpen, isExternal: true },
     { title: "Support", url: "/dashboard/support", icon: LifeBuoy },
   ];
