@@ -88,24 +88,24 @@ export function PublicHeader() {
             </Button>
           ) : (
             <>
-              {/* Sign in — desktop only */}
+              {/* Sign in — visible on both mobile and desktop */}
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden md:flex font-semibold text-[15px] px-4"
+                className="font-semibold text-[13px] sm:text-[15px] px-3 sm:px-4"
               >
                 <Link to="/login">{t("nav_sign_in")}</Link>
               </Button>
 
+              {/* Register CTA — hidden on mobile to avoid crowding */}
               <Button
                 asChild
                 size="sm"
-                className="gradient-brand text-brand-foreground shadow-brand hover:opacity-95 font-semibold text-[13px] sm:text-[15px] px-3 sm:px-5"
+                className="hidden sm:flex gradient-brand text-brand-foreground shadow-brand hover:opacity-95 font-semibold text-[15px] px-5"
               >
                 <Link to="/register">
-                  <span className="hidden sm:inline">{t("nav_become_affiliate")} </span>
-                  <span className="sm:hidden">{t("nav_become_affiliate")}</span>
+                  {t("nav_become_affiliate")}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
