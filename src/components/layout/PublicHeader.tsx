@@ -98,7 +98,6 @@ export function PublicHeader() {
                 <Link to="/login">{t("nav_sign_in")}</Link>
               </Button>
 
-              {/* Register CTA */}
               <Button
                 asChild
                 size="sm"
@@ -106,7 +105,7 @@ export function PublicHeader() {
               >
                 <Link to="/register">
                   <span className="hidden sm:inline">{t("nav_become_affiliate")} </span>
-                  <span className="sm:hidden">{t("nav_sign_in")}</span>
+                  <span className="sm:hidden">{t("nav_become_affiliate")}</span>
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>

@@ -42,7 +42,7 @@ import {
 import { FAQS } from "@/lib/demo-data";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
-import { useCart } from "@/lib/cart-context";
+
 import { useAuth } from "@/lib/auth";
 
 import { PublicHeader } from "@/components/layout/PublicHeader";
@@ -427,21 +427,56 @@ function CategoriesCarousel() {
 }
 
 function ProductsPreview() {
-  const { t } = useI18n();
-  const { addToCart } = useCart();
+  const { t, lang } = useI18n();
   const { user } = useAuth();
   const { data: products = [], isLoading } = useProducts();
+  const { data: dbCategories = [] } = useCategories();
+  const [selectedCat, setSelectedCat] = useState<string>("all");
+  const [seed] = useState(() => Math.random());
+  const [visibleCount, setVisibleCount] = useState(12);
 
-  const randomProducts = useMemo(() => {
-    if (!products.length) return [];
-    const shuffled = [...products].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 6);
+  // Build category list from products
+  const categoryNames = useMemo(() => {
+    const names = Array.from(
+      new Set(products.map((p) => (p.category ?? "").trim()).filter(Boolean))
+    );
+    // Put Promotion first if exists
+    const promo = names.find((c) => c.toLowerCase() === "promotion");
+    const rest = names.filter((c) => c.toLowerCase() !== "promotion").sort();
+    return promo ? [promo, ...rest] : rest;
   }, [products]);
+
+  // Shuffle all products once with seed, then filter by category
+  const shuffledProducts = useMemo(() => {
+    return [...products].sort((a, b) => {
+      const hash = (str: string | undefined) => {
+        if (!str) return 0;
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+        return h;
+      };
+      return Math.sin(hash(a.id) * seed) - Math.sin(hash(b.id) * seed);
+    });
+  }, [products, seed]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCat === "all") return shuffledProducts;
+    return shuffledProducts.filter(
+      (p) => (p.category ?? "").trim().toLowerCase() === selectedCat.toLowerCase()
+    );
+  }, [shuffledProducts, selectedCat]);
+
+  // Reset visible count when category changes
+  const handleCatChange = (cat: string) => {
+    setSelectedCat(cat);
+    setVisibleCount(12);
+  };
 
   return (
     <section id="products" className="py-12 sm:py-24 bg-gradient-to-b from-background to-accent/40">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-8 sm:mb-12 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8 sm:mb-10 max-w-7xl mx-auto">
           <div>
             <div className="text-sm font-semibold uppercase tracking-widest text-success">
               {t("products_label")}
@@ -449,93 +484,180 @@ function ProductsPreview() {
             <h2 className="mt-3 text-4xl md:text-5xl font-bold text-primary" dir="auto">
               {t("products_title")}
             </h2>
+            <p className="mt-2 text-sm text-muted-foreground" dir="auto">
+              {t("products_see_all")} — {products.length}+
+            </p>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/register">
-              {t("products_see_all")} {products.length}+ <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         </div>
+
+        {/* Category filter tabs */}
+        {!isLoading && categoryNames.length > 0 && (
+          <div className="mb-8 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex gap-2 min-w-max">
+              <button
+                onClick={() => handleCatChange("all")}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap border ${
+                  selectedCat === "all"
+                    ? "gradient-brand text-brand-foreground border-transparent shadow-brand"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                {t("products_all") || "الكل"}
+              </button>
+              {categoryNames.map((cat) => {
+                const dbMatch = dbCategories.find(
+                  (c) => c.name.toLowerCase().trim() === cat.toLowerCase().trim()
+                );
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCatChange(cat)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap border ${
+                      selectedCat.toLowerCase() === cat.toLowerCase()
+                        ? "gradient-brand text-brand-foreground border-transparent shadow-brand"
+                        : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {dbMatch?.image && (
+                      <img
+                        src={dbMatch.image}
+                        alt={cat}
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                    )}
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Login banner for non-authenticated users */}
+        {!user && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3">
+            <ShieldCheck className="h-5 w-5 text-brand shrink-0" />
+            <p className="text-sm text-foreground/80" dir="auto">
+              {lang === "ar"
+                ? "يمكنك تصفح جميع المنتجات — سجّل دخولك لتتمكن من إنشاء الطلبات"
+                : "Parcourez tous les produits — connectez-vous pour passer des commandes"}
+            </p>
+            <Link
+              to="/login"
+              className="ml-auto shrink-0 rounded-lg gradient-brand text-brand-foreground text-xs font-bold px-3 py-1.5 shadow-brand hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              {t("nav_sign_in")}
+            </Link>
+          </div>
+        )}
+
+        {/* Products grid */}
         {isLoading ? (
           <div className="product-grid">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(12)].map((_, i) => (
               <div key={i} className="product-card animate-pulse" />
             ))}
           </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">{t("products_empty") || "Aucun produit"}</div>
         ) : (
-          <div className="product-grid">
-            {randomProducts.map((p) => (
-              <div
-                key={p.id}
-                className="product-card"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <Link
-                  to="/product/$productId"
-                  params={{ productId: p.id }}
+          <>
+            <div className="product-grid">
+              {filteredProducts.slice(0, visibleCount).map((p) => (
+                <div
+                  key={p.id}
+                  className="product-card"
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
-                  <div className="product-card-image-wrapper">
-                    {(() => {
-                      const isPromo = (p.category ?? "").toLowerCase().trim() === "promotion";
-                      const gallery = Array.isArray(p.images) 
-                        ? p.images.filter((u): u is string => typeof u === "string" && u.trim() !== "")
-                        : [];
-                      
-                      const ordered = isPromo
-                        ? (gallery.length > 0 ? gallery : [p.image])
-                        : [p.image, ...gallery];
-                        
-                      const imgs = [...new Set(
-                        ordered.filter((u): u is string => typeof u === "string" && u.trim() !== "")
-                      )];
-                      return <ProductImageCarousel images={imgs} alt={p.name} />;
-                    })()}
-                  </div>
-                  <div className="product-card-content">
-                    <h3 className="product-card-title" dir="auto">
-                      {p.name}
-                    </h3>
-                    <div className="product-card-price-row">
-                      {p.is_active ? (
-                        <div className="product-card-price">{formatDZD(p.price)}</div>
-                      ) : (
-                        <div className="text-sm font-bold text-destructive">
-                          {t("product_card_out_of_stock")}
-                        </div>
+                  <Link
+                    to="/product/$productId"
+                    params={{ productId: p.id }}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <div className="product-card-image-wrapper">
+                      {(() => {
+                        const isPromo = (p.category ?? "").toLowerCase().trim() === "promotion";
+                        const gallery = Array.isArray(p.images)
+                          ? p.images.filter((u): u is string => typeof u === "string" && u.trim() !== "")
+                          : [];
+                        const ordered = isPromo
+                          ? (gallery.length > 0 ? gallery : [p.image])
+                          : [p.image, ...gallery];
+                        const imgs = [...new Set(
+                          ordered.filter((u): u is string => typeof u === "string" && u.trim() !== "")
+                        )];
+                        return <ProductImageCarousel images={imgs} alt={p.name} />;
+                      })()}
+                      {/* Category badge */}
+                      {p.category && (
+                        <span className="absolute top-2 left-2 z-20 rounded-full bg-background/90 backdrop-blur px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider">
+                          {p.category}
+                        </span>
                       )}
-                      <button className="product-card-favorite" onClick={(e) => e.preventDefault()}>
-                        <Heart className="h-6 w-6" />
-                      </button>
                     </div>
-                  </div>
-                </Link>
-                {!user ? (
-                  <Button asChild className="w-full rounded-none h-12 bg-muted text-muted-foreground hover:bg-muted hover:text-muted-foreground shadow-none border-t border-border">
-                    <Link to="/login">{t("nav_sign_in")}</Link>
-                  </Button>
-                ) : p.is_active ? (
-                  <button
-                    className="product-card-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addToCart({ id: p.id, name: p.name, image: p.image, price: p.price });
-                    }}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-1.5 inline-block" />
-                    {t("products_add_cart")}
-                  </button>
-                ) : (
-                  <span
-                    className="product-card-btn bg-destructive/10 text-destructive shadow-none"
-                    style={{ backgroundImage: "none" }}
-                  >
-                    {t("product_card_unavailable")}
-                  </span>
-                )}
+                    <div className="product-card-content">
+                      <h3 className="product-card-title" dir="auto">
+                        {p.name}
+                      </h3>
+                      <div className="product-card-price-row">
+                        {p.is_active ? (
+                          <div className="product-card-price">{formatDZD(p.price)}</div>
+                        ) : (
+                          <div className="text-sm font-bold text-destructive">
+                            {t("product_card_out_of_stock")}
+                          </div>
+                        )}
+                        <button className="product-card-favorite" onClick={(e) => e.preventDefault()}>
+                          <Heart className="h-6 w-6" />
+                        </button>
+                      </div>
+                    </div>
+                  </Link>
+                  {/* Action button */}
+                  {!user ? (
+                    <Button
+                      asChild
+                      className="w-full rounded-none h-11 bg-muted/80 text-muted-foreground hover:bg-brand hover:text-brand-foreground shadow-none border-t border-border transition-colors duration-200 text-xs font-semibold gap-1.5"
+                    >
+                      <Link to="/login">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        {t("nav_sign_in")}
+                      </Link>
+                    </Button>
+                  ) : p.is_active ? (
+                    <button
+                      className="product-card-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-1.5 inline-block" />
+                      {t("products_add_cart")}
+                    </button>
+                  ) : (
+                    <span
+                      className="product-card-btn bg-destructive/10 text-destructive shadow-none"
+                      style={{ backgroundImage: "none" }}
+                    >
+                      {t("product_card_unavailable")}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Load more */}
+            {visibleCount < filteredProducts.length && (
+              <div className="flex justify-center mt-10">
+                <Button
+                  variant="outline"
+                  className="px-8 h-12 font-semibold"
+                  onClick={() => setVisibleCount((v) => v + 12)}
+                >
+                  {t("products_load_more") || "Voir plus"} <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </section>
