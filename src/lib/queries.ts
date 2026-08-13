@@ -103,7 +103,7 @@ export function useProducts() {
       const { data: firstPage, count, error: countError } = await supabase
         .from("products")
         .select("*", { count: "exact" })
-        .order("price", { ascending: true })
+        .order("created_at", { ascending: false })
         .range(0, 999);
 
       if (countError) throw countError;
@@ -120,7 +120,7 @@ export function useProducts() {
             supabase
               .from("products")
               .select("*")
-              .order("price", { ascending: true })
+              .order("created_at", { ascending: false })
               .range(page * 1000, (page + 1) * 1000 - 1)
           );
           
@@ -129,7 +129,7 @@ export function useProducts() {
               supabase
                 .from("products")
                 .select("*")
-                .order("price", { ascending: true })
+                .order("created_at", { ascending: false })
                 .range((page + 1) * 1000, (page + 2) * 1000 - 1)
             );
           }

@@ -115,8 +115,8 @@ function RegisterPage() {
             {t("register_sign_in")}
           </Link>
           <div className="mt-6 pt-6 border-t border-border flex justify-center">
-            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex w-full items-center justify-center text-center gap-2 text-white hover:underline font-medium text-sm sm:text-base bg-brand/20 px-4 py-3 rounded-lg">
-              <BookOpen className="h-5 w-5 shrink-0" /> <span className="text-center">دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت</span>
+            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex w-full items-center justify-center text-center gap-2 text-white hover:underline font-bold text-sm sm:text-base bg-brand hover:bg-brand/90 transition-colors px-4 py-3 rounded-lg">
+              <BookOpen className="h-5 w-5 shrink-0" /> <span dir="rtl" className="text-center text-balance">دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت</span>
             </a>
           </div>
         </div>

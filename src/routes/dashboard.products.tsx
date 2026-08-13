@@ -114,7 +114,7 @@ function ProductsPage() {
   const filteredProducts = useMemo(() => {
     let result = products.filter((p) => {
       // When searching, ignore category filter — search ALL products
-      if (!searchQuery && activeCategory !== "All" && (p.category ?? "").trim() !== activeCategory.trim()) {
+      if (!searchQuery && activeCategory !== "All" && (p.category ?? "").trim().toLowerCase() !== activeCategory.trim().toLowerCase()) {
         return false;
       }
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -123,20 +123,19 @@ function ProductsPage() {
       return true;
     });
 
-    if (activeCategory.toLowerCase() === "promotion") {
-      // Shuffle products in Promotion category consistently based on the seed
-      // Using a simple seeded-like approach based on the id to keep it stable during search
-      result = [...result].sort((a, b) => {
-        const hash = (str: string) => {
-          let h = 0;
-          for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
-          return h;
-        };
-        const randA = Math.sin(hash(a.id) * promoSeed);
-        const randB = Math.sin(hash(b.id) * promoSeed);
-        return randA - randB;
-      });
-    }
+    // Shuffle products consistently based on the seed for all categories
+    // Using a simple seeded-like approach based on the id to keep it stable during search
+    result = [...result].sort((a, b) => {
+      const hash = (str: string | undefined) => {
+        if (!str) return 0;
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+        return h;
+      };
+      const randA = Math.sin(hash(a.id) * promoSeed);
+      const randB = Math.sin(hash(b.id) * promoSeed);
+      return randA - randB;
+    });
 
     return result;
   }, [products, selectedCategory, searchQuery, promoSeed]);
@@ -178,9 +177,7 @@ function ProductsPage() {
                         onClick={() => {
                           setSelectedCategory(cat.id === "all" ? "All" : cat.name);
                           setVisibleCount(24);
-                          if (cat.name.toLowerCase() === "promotion") {
-                            setPromoSeed(Math.random());
-                          }
+                          setPromoSeed(Math.random());
                         }}
                       >
                         <div

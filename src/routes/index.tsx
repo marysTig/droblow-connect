@@ -260,8 +260,8 @@ function Hero() {
             </Button>
           </div>
           <div className="mt-6">
-            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex w-full sm:w-auto sm:inline-flex items-center justify-center text-center gap-2 text-white font-semibold hover:underline bg-brand/20 px-4 py-3 rounded-lg text-sm sm:text-base">
-              <BookOpen className="h-5 w-5 shrink-0" /> <span className="text-center">دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت</span>
+            <a href="/Droblow_Affiliate_Formation.pdf" target="_blank" rel="noreferrer" className="flex w-full sm:w-auto sm:inline-flex items-center justify-center text-center gap-2 text-white font-bold hover:underline bg-brand hover:bg-brand/90 transition-colors px-4 py-3 rounded-lg text-sm sm:text-base">
+              <BookOpen className="h-5 w-5 shrink-0" /> <span dir="rtl" className="text-center text-balance">دورة التسويق بالعمولة + كيفية استخدام دروبلو أفلييت</span>
             </a>
           </div>
           <div className="mt-7 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-7 text-sm sm:text-base md:text-lg font-medium text-white">
